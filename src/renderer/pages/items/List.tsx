@@ -27,8 +27,11 @@ export const List: FC<Props> = ({
       showDeleteButton={showDeleteButton}
       onEdit={onEdit}
       onDelete={onDelete}
-      getName={c => c.name}
-      getAdditional={c => `${formatAmount(Number(c.amount ?? 0), settings?.amountFormat)}`}
+      getName={c => (c.brand ? `${c.name} (${c.brand})` : c.name)}
+      getAdditional={c =>
+        `${c.currencySymbol ?? ''}${formatAmount(Number(c.amount ?? 0), settings?.amountFormat)}${c.currencyCode ? ` ${c.currencyCode}` : ''}`
+      }
+      getCode={c => c.code ?? ''}
       getInvoiceCount={c => c.invoiceCount}
       getQuotesCount={c => c.quotesCount}
       getIsArchived={c => c.isArchived}

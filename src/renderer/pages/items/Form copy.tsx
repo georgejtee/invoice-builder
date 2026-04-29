@@ -1,4 +1,4 @@
-import { Autocomplete, Box, Divider, FormControlLabel, Grid, Switch, TextField, Typography } from '@mui/material';
+import { Autocomplete, FormControlLabel, Grid, Switch, TextField } from '@mui/material';
 import { useEffect, useRef, useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
@@ -16,7 +16,6 @@ import type { Unit } from '../../shared/types/unit';
 import { validators } from '../../shared/utils/validatorFunctions';
 import { useAppDispatch, useAppSelector } from '../../state/configureStore';
 import { addToast, selectCategoriesOptions, selectSettings, selectUnitsOptions } from '../../state/pageSlice';
-import { PriceCalculator } from './PriceCalculator';
 
 interface Props {
   item?: Item;
@@ -71,6 +70,7 @@ export const Form: FC<Props> = ({ handleChange = () => {}, item }) => {
     id: item?.id,
     name: item?.name ?? '',
     brand: item?.brand ?? '',
+    code: item?.code ?? '',
     amount: item?.amount ?? '0',
     unitId: item?.unitId,
     currencyId: item?.currencyId,
@@ -102,6 +102,7 @@ export const Form: FC<Props> = ({ handleChange = () => {}, item }) => {
       amount: item?.amount ?? '0',
       unitId: item?.unitId,
       currencyId: item?.currencyId,
+      code: item?.code ?? '',
       categoryId: item?.categoryId,
       description: item?.description ?? '',
       isArchived: item?.isArchived ?? false
@@ -120,11 +121,6 @@ export const Form: FC<Props> = ({ handleChange = () => {}, item }) => {
     });
   }, [form, errors, handleChange, t]);
 
-  // Derive selected currency symbol for the calculator display
-  const selectedCurrency = currencies.find(c => c.id === form.currencyId);
-  // Item's amount is the ZAR base cost fed into the NCE formula chain
-  const randCost = Number(form.amount ?? 0);
-
   return (
     <Grid container spacing={2}>
       <Grid size={{ xs: 12, md: 6 }}>
@@ -142,6 +138,17 @@ export const Form: FC<Props> = ({ handleChange = () => {}, item }) => {
         />
       </Grid>
       <Grid size={{ xs: 12, md: 6 }}>
+        <TextField
+          label={t('items.code')}
+          fullWidth
+          value={form.code}
+          onChange={e => {
+            update('code', e.target.value);
+          }}
+        />
+        </Grid>
+        
+        <Grid size={{ xs: 12, md: 6 }}>
         <TextField
           label={t('items.brand')}
           fullWidth
@@ -222,31 +229,6 @@ export const Form: FC<Props> = ({ handleChange = () => {}, item }) => {
           control={<Switch checked={form.isArchived} onChange={e => update('isArchived', e.target.checked)} />}
           label={t('common.archived')}
         />
-      </Grid>
-
-      {/* ── Price after expense quotation ────────────────────────────── */}
-      <Grid size={{ xs: 12 }}>
-        <Divider sx={{ my: 1 }} />
-        <Box
-          sx={{
-            border: '1px solid',
-            borderColor: 'divider',
-            borderRadius: 2,
-            p: 2,
-            bgcolor: 'background.paper'
-          }}
-        >
-          <Typography variant="subtitle1" fontWeight={600} gutterBottom>
-            {t('items.priceCalculator', 'Price after expense quotation')}
-          </Typography>
-          <Typography variant="body2" color="text.secondary" sx={{ mb: 1.5 }}>
-            {t(
-              'items.priceCalculatorHint',
-              "Uses the item's amount as the ZAR base cost and computes the quoted price via the NCE formula chain (VAT → transport → USD conversion → profit → output currency)."
-            )}
-          </Typography>
-          <PriceCalculator randCost={randCost} currencySymbol={selectedCurrency?.symbol} />
-        </Box>
       </Grid>
     </Grid>
   );

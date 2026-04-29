@@ -10,7 +10,6 @@ import {
   TableChart
 } from '@mui/icons-material';
 import AccountBalanceIcon from '@mui/icons-material/AccountBalance';
-import CalculateIcon from '@mui/icons-material/Calculate';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import CategoryIcon from '@mui/icons-material/Category';
@@ -89,7 +88,16 @@ export const Sidebar: FC = () => {
                 onClick: onClickNavigate
               }
             ]
-          : [])
+          : []), 
+        {
+          text: t('menuItems.priceCheck'),
+          icon: <ReceiptIcon />,
+          path: '/priceCheck',
+          isToggle: false,
+          minHeight: 50,
+          isSelected: isSelected,
+          onClick: onClickNavigate
+        }
       ]
     },
     ...(storeSettings?.presetsON || storeSettings?.styleProfilesON
@@ -192,15 +200,6 @@ export const Sidebar: FC = () => {
           text: t('menuItems.businesses'),
           icon: <Business />,
           path: '/businesses',
-          isToggle: false,
-          minHeight: 50,
-          isSelected: isSelected,
-          onClick: onClickNavigate
-        },
-        {
-          text: t('menuItems.priceCalculator'),
-          icon: <CalculateIcon />,
-          path: '/price-calculator',
           isToggle: false,
           minHeight: 50,
           isSelected: isSelected,

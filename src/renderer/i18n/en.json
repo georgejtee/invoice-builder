@@ -476,6 +476,7 @@
   },
   "items": {
     "add": "Add item",
+    "brand": "Brand",
     "filter": {
       "activeDesc": "Items that are not archived",
       "activeText": "Active items",
@@ -494,7 +495,13 @@
       "noInvoicesText": "Items who do not have invoices"
     },
     "noItem": "Selected a item to view details.",
-    "title": "Item"
+    "title": "Item",
+    "priceCalculatorHint": "NCE formula chain: ZAR base cost → VAT → transport → USD conversion → profit → output currency",
+    "randCostLabel": "ZAR base cost (rand)",
+    "pricingParams": "Pricing parameters",
+    "itemDetails": "Item details",
+    "outputCurrency": "Output currency",
+    "allCurrencies": "All currencies — unit price"
   },
   "languageFormat": {
     "amountFormat": "Amount format",
@@ -514,7 +521,8 @@
     "reports": "Reports",
     "settings": "Settings",
     "styleProfiles": "Style Profiles",
-    "units": "Units"
+    "units": "Units",
+    "priceCalculator": "Price Calculator"
   },
   "presets": {
     "add": "Add preset",

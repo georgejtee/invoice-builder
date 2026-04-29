@@ -12,7 +12,6 @@ import { ClientsPage } from './pages/clients';
 import { CurrenciesPage } from './pages/currencies';
 import { InvoicesPage } from './pages/invoices';
 import { ItemsPage } from './pages/items';
-import { PriceCalculatorPage } from './pages/price_calculator/PriceCalculatorPage';
 import { PresetsPage } from './pages/presets';
 import { QuotesPage } from './pages/quotes';
 import { ReportsPage } from './pages/reports';
@@ -52,7 +51,6 @@ const createRouter = () => {
         { path: 'reports', element: <ReportsPage /> },
         { path: 'banks', element: <BanksPage /> },
         { path: 'presets', element: <PresetsPage /> },
-        { path: 'price-calculator', element: <PriceCalculatorPage /> },
         { path: '*', element: <Navigate to="/invoices" replace /> }
       ]
     }

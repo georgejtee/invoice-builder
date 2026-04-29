@@ -9,7 +9,17 @@ import { mapDatabaseError } from '../utils/errorFunctions';
 import { getHavingClauseFromFilters } from '../utils/filterFunctions';
 import { resolveItemRelations } from '../utils/relationsFunctions';
 
-const itemFields: (keyof Item)[] = ['name', 'amount', 'unitId', 'categoryId', 'description', 'isArchived'];
+const itemFields: (keyof Item)[] = [
+  'name',
+  'brand',
+  'amount',
+  'unitId',
+  'currencyId',
+  'categoryId',
+  'description',
+  'code', 
+  'isArchived'
+];
 
 const handleItemEntity =
   <T extends EntityWithId>(db: DatabaseAdapter, table: string, fields: readonly (keyof T)[]) =>
@@ -41,14 +51,17 @@ const handleItemEntity =
             COUNT(DISTINCT CASE WHEN inv."invoiceType" = 'invoice' THEN ii."parentInvoiceId" END) AS "invoiceCount",
             COUNT(DISTINCT CASE WHEN inv."invoiceType" = 'quotation' THEN ii."parentInvoiceId" END) AS "quotesCount",
             u."name" AS "unitName",
-            c."name" AS "categoryName"
+            c."name" AS "categoryName",
+            curr."code" AS "currencyCode",
+            curr."symbol" AS "currencySymbol"
         FROM items it
         LEFT JOIN units u ON it."unitId" = u."id"
         LEFT JOIN categories c ON it."categoryId" = c."id"
+        LEFT JOIN currencies curr ON it."currencyId" = curr."id"
         LEFT JOIN invoice_items ii ON ii."itemId" = it."id"
         LEFT JOIN invoices inv ON ii."parentInvoiceId" = inv."id"
         WHERE it."id" = ?
-        GROUP BY it."id", u."name", c."name"
+        GROUP BY it."id", u."name", c."name", curr."code", curr."symbol"
         ORDER BY it."createdAt" DESC
       `;
 
@@ -77,13 +90,16 @@ export const getAllItemEntities =
           COUNT(DISTINCT CASE WHEN inv."invoiceType" = 'invoice' THEN ii."parentInvoiceId" END) AS "invoiceCount",
           COUNT(DISTINCT CASE WHEN inv."invoiceType" = 'quotation' THEN ii."parentInvoiceId" END) AS "quotesCount",
           u."name" AS "unitName",
-          c."name" AS "categoryName"
+          c."name" AS "categoryName",
+          curr."code" AS "currencyCode",
+          curr."symbol" AS "currencySymbol"
       FROM items it
       LEFT JOIN units u ON it."unitId" = u."id"
       LEFT JOIN categories c ON it."categoryId" = c."id"
+      LEFT JOIN currencies curr ON it."currencyId" = curr."id"
       LEFT JOIN invoice_items ii ON ii."itemId" = it."id"
       LEFT JOIN invoices inv ON ii."parentInvoiceId" = inv."id"
-      GROUP BY it."id", u."name", c."name"
+      GROUP BY it."id", u."name", c."name", curr."code", curr."symbol"
       ${havingClause ? havingClause : ''}
       ORDER BY it."createdAt" DESC
     `;

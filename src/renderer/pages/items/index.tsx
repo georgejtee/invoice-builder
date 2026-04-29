@@ -19,12 +19,24 @@ import { List } from './List';
 export const ItemsPage: FC = () => {
   const { t } = useTranslation();
 
-  const excelColumns = ['name', 'amount', 'unitName', 'categoryName', 'description', 'isArchived'];
+  const excelColumns = [
+    'name',
+    'brand',
+    'amount',
+    'currencyCode',
+    'unitName',
+    'categoryName',
+    'code',
+    'description',
+    'isArchived'
+  ];
   const excelFileName = 'items';
   const excelTemplateData: Rows = [
     {
       name: 'Paper A4',
+      brand: 'OfficePro',
       amount: '5',
+      currencyCode: 'USD',
       categoryName: 'Goods',
       unitName: 'pack',
       description: 'Standard white A4 paper',
@@ -32,7 +44,9 @@ export const ItemsPage: FC = () => {
     },
     {
       name: 'Pen Blue',
+      brand: 'WriteCo',
       amount: '150',
+      currencyCode: 'USD',
       categoryName: 'Goods',
       unitName: 'pcs',
       description: 'Blue ballpoint pen',

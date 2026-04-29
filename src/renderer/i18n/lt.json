@@ -476,6 +476,7 @@
   },
   "items": {
     "add": "Pridėti prekę",
+    "brand": "Prekės ženklas",
     "filter": {
       "activeDesc": "Elementai, kurie nėra archyvuoti",
       "activeText": "Aktyvūs elementai",

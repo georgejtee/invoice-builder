@@ -487,6 +487,8 @@ export const isItemFromData = (data: unknown): data is ItemFromData => {
     return false;
 
   if (d.amount !== undefined && d.amount !== null && d.amount !== '' && typeof d.amount !== 'string') return false;
+  if (d.brand !== undefined && d.brand !== null && d.brand !== '' && typeof d.brand !== 'string') return false;
+  if (d.code !== undefined && d.code !== null && d.code !== '' && typeof d.code !== 'string') return false;
   if (
     d.description !== undefined &&
     d.description !== null &&
@@ -496,6 +498,8 @@ export const isItemFromData = (data: unknown): data is ItemFromData => {
     return false;
 
   if (d.unitID !== undefined && d.unitID !== null && d.unitID !== '' && typeof d.unitID !== 'number') return false;
+  if (d.currencyId !== undefined && d.currencyId !== null && d.currencyId !== '' && typeof d.currencyId !== 'number')
+    return false;
   if (d.categoryID !== undefined && d.categoryID !== null && d.categoryID !== '' && typeof d.categoryID !== 'number')
     return false;
 
@@ -507,6 +511,13 @@ export const isItemFromData = (data: unknown): data is ItemFromData => {
   )
     return false;
   if (d.unitName !== undefined && d.unitName !== null && d.unitName !== '' && typeof d.unitName !== 'string')
+    return false;
+  if (
+    d.currencyCode !== undefined &&
+    d.currencyCode !== null &&
+    d.currencyCode !== '' &&
+    typeof d.currencyCode !== 'string'
+  )
     return false;
 
   return true;

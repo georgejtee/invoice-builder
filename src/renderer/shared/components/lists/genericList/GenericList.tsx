@@ -27,6 +27,7 @@ interface GenericListProps<T extends { id: number }> {
   onDelete: (id: number) => void;
   getShortName?: (item: T) => string;
   getName: (item: T) => string;
+  getCode?: (item: T) => string;
   getEmail?: (item: T) => string | undefined;
   getPhone?: (item: T) => string | undefined;
   getAdditional?: (item: T) => string | undefined;
@@ -41,10 +42,11 @@ export const GenericList = <T extends { id: number }>({
   onEdit,
   onDelete,
   getShortName,
-  getName,
+  getName,  
   getEmail,
   getPhone,
   getInvoiceCount,
+  getCode,
   getQuotesCount,
   getAdditional,
   getIsArchived

@@ -221,14 +221,18 @@ export const initSchema = async (db: DatabaseAdapter): Promise<void> => {
       `CREATE TABLE IF NOT EXISTS items (
       "id" ${getColumnType('INTEGER PRIMARY KEY AUTOINCREMENT', db.type)},
       "name" TEXT NOT NULL,
+      "brand" TEXT,
+      "code" TEXT,
       "amount" TEXT NOT NULL DEFAULT '0',
       "unitId" INTEGER,
+      "currencyId" INTEGER,
       "categoryId" INTEGER,
       "description" TEXT,
       "isArchived" INTEGER NOT NULL DEFAULT 0 CHECK ("isArchived" IN (0,1)),
       "createdAt" ${getColumnType('DATETIME', db.type)} NOT NULL DEFAULT ${getDefaultValue("(datetime('now'))", db.type)},
       "updatedAt" ${getColumnType('DATETIME', db.type)} NOT NULL DEFAULT ${getDefaultValue("(datetime('now'))", db.type)},
       FOREIGN KEY ("unitId") REFERENCES units("id"),
+      FOREIGN KEY ("currencyId") REFERENCES currencies("id"),
       FOREIGN KEY ("categoryId") REFERENCES categories("id")
     );`
     );
@@ -367,6 +371,7 @@ export const initSchema = async (db: DatabaseAdapter): Promise<void> => {
     );
     await db.run(`CREATE INDEX IF NOT EXISTS idx_invoice_items_itemId ON invoice_items("itemId")`);
     await db.run(`CREATE INDEX IF NOT EXISTS idx_items_unitId ON items("unitId")`);
+    await db.run(`CREATE INDEX IF NOT EXISTS idx_items_currencyId ON items("currencyId")`);
     await db.run(`CREATE INDEX IF NOT EXISTS idx_items_categoryId ON items("categoryId")`);
     await db.run(`CREATE INDEX IF NOT EXISTS idx_clients_active ON clients("isArchived")`);
     await db.run(`CREATE INDEX IF NOT EXISTS idx_items_active ON items("isArchived")`);

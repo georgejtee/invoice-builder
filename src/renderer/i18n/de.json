@@ -476,6 +476,7 @@
   },
   "items": {
     "add": "Artikel hinzufügen",
+    "brand": "Marke",
     "filter": {
       "activeDesc": "Artikel, die nicht archiviert sind",
       "activeText": "Aktive Artikel",
