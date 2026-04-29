@@ -501,7 +501,32 @@
     "pricingParams": "Pricing parameters",
     "itemDetails": "Item details",
     "outputCurrency": "Output currency",
-    "allCurrencies": "All currencies — unit price"
+    "allCurrencies": "All currencies — unit price",
+    "transportFactor": "Transport factor",
+    "exchangeDivisor": "Exchange divisor (ZAR→USD)",
+    "usdVatRate": "USD VAT rate",
+    "profitMultiplier": "Profit multiplier",
+    "profitMultiplierHint": "Multiplier applied to raw USD cost (cell M18 in NCE sheet)",
+    "rtgsRate": "RTGS rate",
+    "rtgsRateHint": "USD to RTGS/ZWL conversion rate (cell Q18 in NCE sheet)",
+    "defaultCurrency": "Default output currency",
+    "unitPrice": "Unit price",
+    "lineTotal": "Line total",
+    "priceAfterExpense": "Price after expense",
+    "formulaBreakdown": "Formula breakdown",
+    "computedPrice": "Computed price",
+    "computedPriceHint": "Price after expenses computed using the NCE pricing formula",
+    "breakdown": {
+      "randCost": "Rand cost (base)",
+      "randVat": "ZAR VAT (15%)",
+      "randTotal": "ZAR total",
+      "transport": "Transport (×{{f}})",
+      "usdConversion": "USD conversion (÷{{d}})",
+      "usdProfit": "USD + profit (×{{m}})",
+      "usdVat": "USD VAT ({{r}}%)",
+      "usdTotal": "USD unit price",
+      "rtgsTotal": "RTGS total (×{{r}})"
+    }
   },
   "languageFormat": {
     "amountFormat": "Amount format",
@@ -589,7 +614,8 @@
       "turnUBL": "Enable exporting invoices in UBL 2.1 XML compliant with PEPPOL BIS Billing 3.0",
       "turnXRechnung": "Enable exporting invoices in UBL 2.1 XML compliant with the German XRechnung 3.0 standard",
       "tutorial": "Checkout guide on how to use application",
-      "wallOfFame": "View the supporters who have contributed to the app"
+      "wallOfFame": "View the supporters who have contributed to the app",
+      "priceCalculator": "Configure default pricing parameters for the NCE formula chain."
     },
     "importConfirmText": "Are you sure you want to import this JSON file? This action will erase your current database and replace it with the data from the backup. This cannot be undone.",
     "titles": {
@@ -611,7 +637,8 @@
       "turnUBL": "UBL 2.1 (PEPPOL BIS Billing 3.0)",
       "turnXRechnung": "XRechnung (UBL 2.1)",
       "tutorial": "Tutorial",
-      "wallOfFame": "Wall of fame"
+      "wallOfFame": "Wall of fame",
+      "priceCalculator": "Price Calculator"
     },
     "updateConfirmText": "A new version ({{newVersion}}) is ready. Restart now to update from {{currentVersion}}? You can cancel and update will apply on next launch."
   },

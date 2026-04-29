@@ -19,6 +19,12 @@ export interface Settings {
   xrechnungON: boolean;
   presetsON: boolean;
   reportsON: boolean;
+  pcTransportFactor?: number;
+  pcExchangeDivisor?: number;
+  pcProfitMultiplier?: number;
+  pcUsdVatRate?: number;
+  pcRtgsRate?: number;
+  pcDefaultCurrency?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -39,4 +45,10 @@ export interface SettingsUpdate {
   xrechnungON?: boolean;
   presetsON?: boolean;
   reportsON?: boolean;
+  pcTransportFactor?: number;
+  pcExchangeDivisor?: number;
+  pcProfitMultiplier?: number;
+  pcUsdVatRate?: number;
+  pcRtgsRate?: number;
+  pcDefaultCurrency?: string;
 }

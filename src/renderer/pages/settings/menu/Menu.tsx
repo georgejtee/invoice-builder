@@ -1,3 +1,4 @@
+import CalculateIcon from '@mui/icons-material/Calculate';
 import { DarkMode, Description, FileDownload, Language, LightMode } from '@mui/icons-material';
 import AssessmentIcon from '@mui/icons-material/Assessment';
 import AutorenewIcon from '@mui/icons-material/Autorenew';
@@ -74,6 +75,14 @@ export const Menu: FC<Props> = ({
           isToggle: false,
           isSelected: MenuItemSettings.Receipt === selectedMenu,
           onClick: () => onSelected(MenuItemSettings.Receipt)
+        },
+        {
+          text: t('settingsMenuItems.titles.priceCalculator'),
+          description: t('settingsMenuItems.descriptions.priceCalculator'),
+          icon: <CalculateIcon />,
+          isToggle: false,
+          isSelected: MenuItemSettings.PriceCalculator === selectedMenu,
+          onClick: () => onSelected(MenuItemSettings.PriceCalculator)
         },
         {
           text: t('settingsMenuItems.titles.darkMode'),

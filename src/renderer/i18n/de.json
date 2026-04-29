@@ -582,7 +582,8 @@
       "turnUBL": "Export von Rechnungen im UBL 2.1 XML-Format aktivieren, konform mit PEPPOL BIS Billing 3.0",
       "turnXRechnung": "Aktivieren Sie den Export von Rechnungen im UBL 2.1 XML-Format gemäß dem deutschen XRechnung 3.0-Standard",
       "tutorial": "Anleitung zur Verwendung der Anwendung ansehen",
-      "wallOfFame": "Sehen Sie die Unterstützer, die zur Entwicklung der App beigetragen haben"
+      "wallOfFame": "Sehen Sie die Unterstützer, die zur Entwicklung der App beigetragen haben",
+      "priceCalculator": "Standardwerte für die NCE-Preiskette (Taschenrechner & Angebote)."
     },
     "importConfirmText": "Sind Sie sicher, dass Sie diese JSON-Datei importieren möchten? Diese Aktion löscht Ihre aktuelle Datenbank und ersetzt sie durch die Daten aus dem Backup. Dies kann nicht rückgängig gemacht werden.",
     "titles": {
@@ -604,7 +605,8 @@
       "turnUBL": "UBL 2.1 (PEPPOL BIS Billing 3.0)",
       "turnXRechnung": "XRechnung (UBL 2.1)",
       "tutorial": "Anleitung",
-      "wallOfFame": "Ruhmeshalle"
+      "wallOfFame": "Ruhmeshalle",
+      "priceCalculator": "Preisrechner"
     },
     "updateConfirmText": "Eine neue Version ({{newVersion}}) ist verfügbar. Jetzt neu starten, um von {{currentVersion}} zu aktualisieren? Sie können abbrechen und das Update wird beim nächsten Start angewendet."
   },

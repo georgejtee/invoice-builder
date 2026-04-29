@@ -582,7 +582,8 @@
       "turnUBL": "Activer l'export des factures au format XML UBL 2.1 conforme à PEPPOL BIS Billing 3.0",
       "turnXRechnung": "Activer l'exportation des factures en XML UBL 2.1 conforme à la norme allemande XRechnung 3.0",
       "tutorial": "Consultez le guide d’utilisation",
-      "wallOfFame": "Découvrez les contributeurs qui ont soutenu le développement de l’application"
+      "wallOfFame": "Découvrez les contributeurs qui ont soutenu le développement de l’application",
+      "priceCalculator": "Paramètres par défaut de la chaîne de prix NCE (calculateur et devis)."
     },
     "importConfirmText": "Êtes-vous sûr de vouloir importer ce fichier JSON ? Cette action effacera votre base actuelle et la remplacera par les données de la sauvegarde. Cette action est irréversible.",
     "titles": {
@@ -604,7 +605,8 @@
       "turnUBL": "UBL 2.1 (PEPPOL BIS Billing 3.0)",
       "turnXRechnung": "XRechnung (UBL 2.1)",
       "tutorial": "Tutoriel",
-      "wallOfFame": "Tableau d'honneur"
+      "wallOfFame": "Tableau d'honneur",
+      "priceCalculator": "Calculateur de prix"
     },
     "updateConfirmText": "Une nouvelle version ({{newVersion}}) est prête. Redémarrer maintenant pour mettre à jour depuis {{currentVersion}} ? Vous pouvez annuler et la mise à jour s’appliquera au prochain lancement."
   },

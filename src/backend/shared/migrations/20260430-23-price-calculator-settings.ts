@@ -13,7 +13,7 @@ export const up = async (db: DatabaseAdapter) => {
       ['pcProfitMultiplier', 'REAL DEFAULT 1.35'],
       ['pcUsdVatRate', 'REAL DEFAULT 0.155'],
       ['pcRtgsRate', 'REAL DEFAULT 36'],
-      ['pcDefaultCurrency', 'TEXT DEFAULT "USD"']
+      ['pcDefaultCurrency', `TEXT DEFAULT 'USD'`]
     ];
 
     for (const [col, def] of additions) {

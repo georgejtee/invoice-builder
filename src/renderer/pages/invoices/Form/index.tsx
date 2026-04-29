@@ -939,6 +939,7 @@ const InvoiceFormComponent: FC<Props> = ({
         isOpen={isDropdownOpenItems}
         type={type}
         headerOptions={customFieldHeaders}
+        invoiceCurrencyCode={invoiceForm?.invoiceCurrencySnapshot?.currencyCode}
         onClose={() => handleOnClose(setIsDropdownOpenItems)}
         onOpen={() => handleOnOpen(setIsDropdownOpenItems)}
         onClick={handleClickItems}

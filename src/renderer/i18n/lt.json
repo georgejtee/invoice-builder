@@ -582,7 +582,8 @@
       "turnUBL": "Įjunkti sąskaitų eksportą UBL 2.1 XML formatu, atitinkančiu PEPPOL BIS Billing 3.0",
       "turnXRechnung": "Įjungti sąskaitų eksportavimą UBL 2.1 XML formatu, atitinkančiu Vokietijos XRechnung 3.0 standartą",
       "tutorial": "Peržiūrėkite gidą, kaip naudotis programa",
-      "wallOfFame": "Peržiūrėkite rėmėjus, kurie prisidėjo prie programėlės kūrimo"
+      "wallOfFame": "Peržiūrėkite rėmėjus, kurie prisidėjo prie programėlės kūrimo",
+      "priceCalculator": "Numatytieji NCE kainų grandinės nustatymai (skaičiuotuvas ir pasiūlymai)."
     },
     "importConfirmText": "Ar tikrai norite importuoti šį JSON failą? Šis veiksmas ištrins dabartinę duomenų bazę ir ją pakeis duomenimis iš atsarginės kopijos. Šio veiksmo atšaukti nebus galima.",
     "titles": {
@@ -604,7 +605,8 @@
       "turnUBL": "UBL 2.1 (PEPPOL BIS Billing 3.0)",
       "turnXRechnung": "XRechnung (UBL 2.1)",
       "tutorial": "Instrukcija",
-      "wallOfFame": "Garbės siena"
+      "wallOfFame": "Garbės siena",
+      "priceCalculator": "Kainų skaičiuotuvas"
     },
     "updateConfirmText": "Nauja versija ({{newVersion}}) paruošta. Perkrauti dabar, kad atnaujintumėte iš {{currentVersion}}? Atšaukę, atnaujinimas bus kitą kartą paleidus programą."
   },

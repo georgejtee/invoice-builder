@@ -19,6 +19,13 @@ export interface Settings {
   xrechnungON: boolean;
   presetsON: boolean;
   reportsON: boolean;
+  /** Price calculator (NCE chain) defaults — see migration 20260430-23. */
+  pcTransportFactor?: number;
+  pcExchangeDivisor?: number;
+  pcProfitMultiplier?: number;
+  pcUsdVatRate?: number;
+  pcRtgsRate?: number;
+  pcDefaultCurrency?: string;
   createdAt: string;
   updatedAt: string;
 }

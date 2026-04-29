@@ -158,6 +158,23 @@ export const pageSlice = createSlice({
         amountFormat: action.payload.amountFormat,
         dateFormat: action.payload.dateFormat
       };
+    },
+    setPriceCalculatorParams: (
+      state,
+      action: PayloadAction<{
+        pcTransportFactor: number;
+        pcExchangeDivisor: number;
+        pcProfitMultiplier: number;
+        pcUsdVatRate: number;
+        pcRtgsRate: number;
+        pcDefaultCurrency: string;
+      }>
+    ) => {
+      if (!state.settings) return;
+      state.settings = {
+        ...state.settings,
+        ...action.payload
+      };
     }
   }
 });
@@ -198,6 +215,7 @@ export const {
   setUpdateMessage,
   setCustomInvoiseSettings,
   setLanguageDate,
+  setPriceCalculatorParams,
   setCategoryOptions,
   setUnitOptions,
   setBusinessSnapshotOptions,

@@ -35,6 +35,8 @@ interface Props {
   headerOptions: CustomFieldMeta[];
   currQuantity?: string;
   currUnitPrice?: number;
+  priceAfterExpense?: number;
+  usePriceAfterExpenseAsUnitPrice?: boolean;
   customField?: CustomField;
   onCancel?: () => void;
   onSave?: (data: ItemForm) => void;
@@ -45,6 +47,8 @@ const ItemMetadataSetterComponent: FC<Props> = ({
   headerOptions,
   currQuantity,
   currUnitPrice,
+  priceAfterExpense,
+  usePriceAfterExpenseAsUnitPrice = false,
   customField,
   onCancel = () => {},
   onSave = () => {}
@@ -52,13 +56,16 @@ const ItemMetadataSetterComponent: FC<Props> = ({
   const { t } = useTranslation();
   const storeSettings = useAppSelector(selectSettings);
   const [isFormValid, setIsFormValid] = useState(true);
+  const computedUnitPrice = Number(
+    usePriceAfterExpenseAsUnitPrice ? (priceAfterExpense ?? 0) : (currUnitPrice ?? 0)
+  );
   const { form, setForm, update } = useForm<ItemForm>({
     quantity: Number(currQuantity ?? 1),
     header: customField?.header ?? undefined,
     value: customField?.value ?? undefined,
     sortOrder: customField?.sortOrder ?? undefined,
     alignment: customField?.alignment ?? undefined,
-    unitPrice: Number(currUnitPrice ?? 0)
+    unitPrice: computedUnitPrice
   });
   const [errors, setErrors] = useState({
     quantity: false,
@@ -175,9 +182,14 @@ const ItemMetadataSetterComponent: FC<Props> = ({
         value: customField?.value ?? undefined,
         sortOrder: customField?.sortOrder ?? undefined,
         alignment: customField?.alignment ?? undefined,
-        unitPrice: Number(currUnitPrice ?? 0)
+        unitPrice: computedUnitPrice
       });
-  }, [currQuantity, currUnitPrice, customField, isOpen, setForm]);
+  }, [currQuantity, customField, isOpen, setForm, computedUnitPrice]);
+
+  useEffect(() => {
+    if (!usePriceAfterExpenseAsUnitPrice) return;
+    update('unitPrice', computedUnitPrice);
+  }, [usePriceAfterExpenseAsUnitPrice, computedUnitPrice, update]);
 
   useEffect(() => {
     if (isOpen) {
@@ -195,7 +207,10 @@ const ItemMetadataSetterComponent: FC<Props> = ({
         formData={form}
         onClose={onCancel}
         onSave={data => {
-          onSave(data as ItemForm);
+          onSave({
+            ...(data as ItemForm),
+            unitPrice: usePriceAfterExpenseAsUnitPrice ? computedUnitPrice : (data as ItemForm).unitPrice
+          });
           setErrors({
             unitPrice: false,
             quantity: false,
@@ -224,18 +239,27 @@ const ItemMetadataSetterComponent: FC<Props> = ({
           </Grid>
           {storeSettings && (
             <Grid size={{ xs: 12, md: 6 }}>
-              <AmountInput
-                required={true}
-                amountFormat={storeSettings?.amountFormat}
-                label={t('common.amount')}
-                value={form.unitPrice}
-                error={errors.unitPrice}
-                helperText={errors.unitPrice ? t('common.fieldRequired') : ''}
-                onChange={e => {
-                  update('unitPrice', e);
-                  validateField('unitPrice', (e ?? '').toString());
-                }}
-              />
+              {usePriceAfterExpenseAsUnitPrice ? (
+                <TextField
+                  fullWidth
+                  label={t('items.priceAfterExpense', 'Price after expense')}
+                  value={computedUnitPrice}
+                  InputProps={{ readOnly: true }}
+                />
+              ) : (
+                <AmountInput
+                  required={true}
+                  amountFormat={storeSettings?.amountFormat}
+                  label={t('common.amount')}
+                  value={form.unitPrice}
+                  error={errors.unitPrice}
+                  helperText={errors.unitPrice ? t('common.fieldRequired') : ''}
+                  onChange={e => {
+                    update('unitPrice', e);
+                    validateField('unitPrice', (e ?? '').toString());
+                  }}
+                />
+              )}
             </Grid>
           )}
           <Grid size={{ xs: 12, md: 6 }}>

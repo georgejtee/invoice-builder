@@ -1,15 +1,22 @@
 import { SwipeableDrawer, useMediaQuery, useTheme } from '@mui/material';
-import { memo, useState, type FC } from 'react';
+import { memo, useMemo, useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { CRUDPage } from '../../../../shared/components/layout/crudPage/CRUDPage';
 import { FilterType } from '../../../../shared/enums/filterType';
-import type { InvoiceType } from '../../../../shared/enums/invoiceType';
+import { InvoiceType } from '../../../../shared/enums/invoiceType';
 import { useItemsRetrieve } from '../../../../shared/hooks/items/useItemsRetrieve';
 import type { Filter, FilterData } from '../../../../shared/types/filter';
 import type { CustomFieldMeta, ItemForm } from '../../../../shared/types/invoice';
 import type { Item, ItemAdd, ItemUpdate } from '../../../../shared/types/item';
 import type { Response } from '../../../../shared/types/response';
+import { computePrice } from '../../../../shared/utils/computePrice';
 import { createCommonFilters, createInvoiceFilters } from '../../../../shared/utils/filterSortFunctions';
+import {
+  currencyCodeToOutputCurrency,
+  priceParamsFromSettings
+} from '../../../../shared/utils/priceCalculatorFromSettings';
+import { useAppSelector } from '../../../../state/configureStore';
+import { selectSettings } from '../../../../state/pageSlice';
 import { List as ItemsList } from '../../../items/List';
 import { ItemMetadataSetter } from '../Modals/ItemMetadataSetter';
 
@@ -17,12 +24,22 @@ interface Props {
   isOpen: boolean;
   type: InvoiceType;
   headerOptions: CustomFieldMeta[];
+  /** Invoice document currency code — used with quotations to pick USD / ZAR / RTGS pricing branch. */
+  invoiceCurrencyCode?: string | null;
   onClose?: () => void;
   onOpen?: () => void;
   onClick?: (item: Item, data: ItemForm) => void;
 }
 
-const ItemsDropdownComponent: FC<Props> = ({ isOpen, type, headerOptions, onClose, onOpen, onClick }) => {
+const ItemsDropdownComponent: FC<Props> = ({
+  isOpen,
+  type,
+  headerOptions,
+  invoiceCurrencyCode,
+  onClose,
+  onOpen,
+  onClick
+}) => {
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
 
@@ -36,6 +53,20 @@ const ItemsDropdownComponent: FC<Props> = ({ isOpen, type, headerOptions, onClos
     return { items: items, execute };
   };
   const [selectedItem, setSelectedItem] = useState<Item | undefined>(undefined);
+  const storeSettings = useAppSelector(selectSettings);
+
+  const suggestedUnitPrice = useMemo(() => {
+    if (!selectedItem) return 0;
+    if (type !== InvoiceType.quotation) {
+      return Number(selectedItem.amount ?? 0);
+    }
+    return computePrice({
+      randCost: Number(selectedItem.amount ?? 0),
+      qty: 1,
+      ...priceParamsFromSettings(storeSettings),
+      currency: currencyCodeToOutputCurrency(invoiceCurrencyCode ?? undefined)
+    }).unitPrice;
+  }, [type, selectedItem, storeSettings, invoiceCurrencyCode]);
 
   return (
     <>
@@ -43,7 +74,9 @@ const ItemsDropdownComponent: FC<Props> = ({ isOpen, type, headerOptions, onClos
         <ItemMetadataSetter
           type={type}
           headerOptions={headerOptions}
-          currUnitPrice={Number(selectedItem?.amount ?? 0)}
+          currUnitPrice={suggestedUnitPrice}
+          priceAfterExpense={type === InvoiceType.quotation ? suggestedUnitPrice : undefined}
+          usePriceAfterExpenseAsUnitPrice={type === InvoiceType.quotation}
           isOpen={selectedItem !== undefined}
           onCancel={() => setSelectedItem(undefined)}
           onSave={data => {

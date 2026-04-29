@@ -6,10 +6,6 @@ import {
   Box,
   Chip,
   Divider,
-  FormControl,
-  InputLabel,
-  MenuItem,
-  Select,
   Slider,
   Stack,
   Table,
@@ -24,7 +20,12 @@ import {
 } from '@mui/material';
 import { useEffect, useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
+import { OUTPUT_CURRENCY_CODES } from '../../shared/constants/priceCalculatorOptions';
 import { computePrice, type OutputCurrency } from '../../shared/utils/computePrice';
+import {
+  defaultOutputCurrencyFromSettings,
+  priceParamsFromSettings
+} from '../../shared/utils/priceCalculatorFromSettings';
 import { useAppSelector } from '../../state/configureStore';
 import { selectSettings } from '../../state/pageSlice';
 
@@ -34,25 +35,6 @@ interface Props {
   /** The item's currency symbol (e.g. "$", "R") – used for display hints */
   currencySymbol?: string;
 }
-
-const TRANSPORT_OPTIONS = [
-  { label: '1.25 — Standard', value: 1.25 },
-  { label: '1.35 — Cappuccino / Espresso', value: 1.35 }
-];
-
-const EXCHANGE_OPTIONS = [
-  { label: '15', value: 15 },
-  { label: '17', value: 17 },
-  { label: '17.5', value: 17.5 }
-];
-
-const VAT_OPTIONS = [
-  { label: '14.5%', value: 0.145 },
-  { label: '15.0%', value: 0.15 },
-  { label: '15.5%', value: 0.155 }
-];
-
-const CURRENCIES: OutputCurrency[] = ['USD', 'ZAR', 'RTGS'];
 
 const CURRENCY_SYMBOLS: Record<OutputCurrency, string> = {
   USD: '$',
@@ -66,9 +48,9 @@ function fmtNum(value: number, currency: OutputCurrency): string {
   return `${sym} ${formatted}`;
 }
 
-export const PriceCalculator: FC<Props> = ({ randCost, currencySymbol }) => {
+export const PriceCalculator: FC<Props> = ({ randCost }) => {
   const { t } = useTranslation();
-  const settings = useAppSelector(selectSettings);
+  const storeSettings = useAppSelector(selectSettings);
 
   const [currency, setCurrency] = useState<OutputCurrency>('USD');
   const [qty, setQty] = useState<number>(1);
@@ -78,33 +60,92 @@ export const PriceCalculator: FC<Props> = ({ randCost, currencySymbol }) => {
   const [usdVatRate, setUsdVatRate] = useState<number>(0.155);
   const [rtgsRate, setRtgsRate] = useState<number>(36);
 
+  useEffect(() => {
+    if (!storeSettings) return;
+    const p = priceParamsFromSettings(storeSettings);
+    setTransportFactor(p.transportFactor);
+    setExchangeDivisor(p.exchangeDivisor);
+    setProfitMultiplier(p.profitMultiplier);
+    setUsdVatRate(p.usdVatRate);
+    setRtgsRate(p.rtgsRate);
+    setCurrency(defaultOutputCurrencyFromSettings(storeSettings));
+  }, [storeSettings]);
+
   const [result, setResult] = useState(() =>
-    computePrice({ randCost: randCost || 0, qty, transportFactor, exchangeDivisor, profitMultiplier, usdVatRate, rtgsRate, currency })
+    computePrice({
+      randCost: randCost || 0,
+      qty,
+      transportFactor,
+      exchangeDivisor,
+      profitMultiplier,
+      usdVatRate,
+      rtgsRate,
+      currency
+    })
   );
 
   useEffect(() => {
     setResult(
-      computePrice({ randCost: randCost || 0, qty, transportFactor, exchangeDivisor, profitMultiplier, usdVatRate, rtgsRate, currency })
+      computePrice({
+        randCost: randCost || 0,
+        qty,
+        transportFactor,
+        exchangeDivisor,
+        profitMultiplier,
+        usdVatRate,
+        rtgsRate,
+        currency
+      })
     );
   }, [randCost, qty, currency, transportFactor, exchangeDivisor, profitMultiplier, usdVatRate, rtgsRate]);
 
-  const sym = CURRENCY_SYMBOLS[currency];
-
   const breakdownRows = [
-    { label: 'Rand cost (base)', value: `R ${(result.breakdown.randCost).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: 'ZAR VAT (15%)', value: `R ${(result.breakdown.randVat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: 'ZAR total', value: `R ${(result.breakdown.randTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: `Transport (×${transportFactor})`, value: `R ${(result.breakdown.transport).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: `USD conversion (÷${exchangeDivisor})`, value: `$ ${(result.breakdown.usdConversion).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: `USD + profit (×${profitMultiplier})`, value: `$ ${(result.breakdown.usdIncProfit).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: `USD VAT (${(usdVatRate * 100).toFixed(1)}%)`, value: `$ ${(result.breakdown.usdVat).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: 'USD unit price', value: `$ ${(result.breakdown.usdTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` },
-    { label: `RTGS total (×${rtgsRate})`, value: `ZWL ${(result.breakdown.rtgsTotal).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` }
+    {
+      label: 'Rand cost (base)',
+      value: `R ${result.breakdown.randCost.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: 'ZAR VAT (15%)',
+      value: `R ${result.breakdown.randVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: 'ZAR total',
+      value: `R ${result.breakdown.randTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: `Transport (×${transportFactor})`,
+      value: `R ${result.breakdown.transport.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: `USD conversion (÷${exchangeDivisor})`,
+      value: `$ ${result.breakdown.usdConversion.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: `USD + profit (×${profitMultiplier})`,
+      value: `$ ${result.breakdown.usdIncProfit.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: `USD VAT (${(usdVatRate * 100).toFixed(1)}%)`,
+      value: `$ ${result.breakdown.usdVat.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: 'USD unit price',
+      value: `$ ${result.breakdown.usdTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    },
+    {
+      label: `RTGS total (×${rtgsRate})`,
+      value: `ZWL ${result.breakdown.rtgsTotal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+    }
   ];
 
   return (
     <Box sx={{ mt: 1 }}>
-      <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.7rem' }}>
+      <Typography
+        variant="subtitle2"
+        color="text.secondary"
+        gutterBottom
+        sx={{ textTransform: 'uppercase', letterSpacing: '0.07em', fontSize: '0.7rem' }}
+      >
         {t('items.priceCalculator', 'Price after expense quotation')}
       </Typography>
 
@@ -112,12 +153,14 @@ export const PriceCalculator: FC<Props> = ({ randCost, currencySymbol }) => {
       <ToggleButtonGroup
         value={currency}
         exclusive
-        onChange={(_e, val) => { if (val) setCurrency(val as OutputCurrency); }}
+        onChange={(_e, val) => {
+          if (val) setCurrency(val as OutputCurrency);
+        }}
         size="small"
         fullWidth
         sx={{ mb: 2 }}
       >
-        {CURRENCIES.map(c => (
+        {OUTPUT_CURRENCY_CODES.map(c => (
           <ToggleButton key={c} value={c} sx={{ fontWeight: 600, fontSize: '0.75rem' }}>
             {c}
           </ToggleButton>
@@ -200,44 +243,35 @@ export const PriceCalculator: FC<Props> = ({ randCost, currencySymbol }) => {
 
       {/* Parameters */}
       <Stack spacing={1.5} sx={{ mb: 1.5 }}>
-        <FormControl size="small" fullWidth>
-          <InputLabel>{t('items.transportFactor', 'Transport factor')}</InputLabel>
-          <Select
-            value={transportFactor}
-            label={t('items.transportFactor', 'Transport factor')}
-            onChange={e => setTransportFactor(Number(e.target.value))}
-          >
-            {TRANSPORT_OPTIONS.map(o => (
-              <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <TextField
+          size="small"
+          label={t('items.transportFactor', 'Transport factor')}
+          type="number"
+          value={transportFactor}
+          onChange={e => setTransportFactor(Math.max(0, Number(e.target.value)))}
+          inputProps={{ min: 0, step: 0.01 }}
+          fullWidth
+        />
 
-        <FormControl size="small" fullWidth>
-          <InputLabel>{t('items.exchangeDivisor', 'Exchange divisor (ZAR→USD)')}</InputLabel>
-          <Select
-            value={exchangeDivisor}
-            label={t('items.exchangeDivisor', 'Exchange divisor (ZAR→USD)')}
-            onChange={e => setExchangeDivisor(Number(e.target.value))}
-          >
-            {EXCHANGE_OPTIONS.map(o => (
-              <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <TextField
+          size="small"
+          label={t('items.exchangeDivisor', 'Exchange divisor (ZAR→USD)')}
+          type="number"
+          value={exchangeDivisor}
+          onChange={e => setExchangeDivisor(Math.max(0.000001, Number(e.target.value)))}
+          inputProps={{ min: 0.000001, step: 0.01 }}
+          fullWidth
+        />
 
-        <FormControl size="small" fullWidth>
-          <InputLabel>{t('items.usdVatRate', 'USD VAT rate')}</InputLabel>
-          <Select
-            value={usdVatRate}
-            label={t('items.usdVatRate', 'USD VAT rate')}
-            onChange={e => setUsdVatRate(Number(e.target.value))}
-          >
-            {VAT_OPTIONS.map(o => (
-              <MenuItem key={o.value} value={o.value}>{o.label}</MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <TextField
+          size="small"
+          label={t('items.usdVatRate', 'USD VAT rate')}
+          type="number"
+          value={usdVatRate}
+          onChange={e => setUsdVatRate(Math.max(0, Number(e.target.value)))}
+          inputProps={{ min: 0, step: 0.001 }}
+          fullWidth
+        />
 
         <Stack direction="row" spacing={1.5}>
           <Tooltip title="Profit multiplier (cell M18)" arrow>
@@ -269,9 +303,17 @@ export const PriceCalculator: FC<Props> = ({ randCost, currencySymbol }) => {
       <Accordion
         disableGutters
         elevation={0}
-        sx={{ border: '1px solid', borderColor: 'divider', borderRadius: '8px !important', '&:before': { display: 'none' } }}
+        sx={{
+          border: '1px solid',
+          borderColor: 'divider',
+          borderRadius: '8px !important',
+          '&:before': { display: 'none' }
+        }}
       >
-        <AccordionSummary expandIcon={<ExpandMoreIcon fontSize="small" />} sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0 } }}>
+        <AccordionSummary
+          expandIcon={<ExpandMoreIcon fontSize="small" />}
+          sx={{ minHeight: 40, '& .MuiAccordionSummary-content': { my: 0 } }}
+        >
           <Typography variant="caption" fontWeight={600} color="text.secondary">
             {t('items.formulaBreakdown', 'Formula breakdown')}
           </Typography>
@@ -281,7 +323,9 @@ export const PriceCalculator: FC<Props> = ({ randCost, currencySymbol }) => {
             <TableBody>
               {breakdownRows.map((row, i) => (
                 <TableRow key={i} sx={{ '&:last-child td': { borderBottom: 0 } }}>
-                  <TableCell sx={{ pl: 0, py: 0.5, fontSize: '0.72rem', color: 'text.secondary', borderColor: 'divider' }}>
+                  <TableCell
+                    sx={{ pl: 0, py: 0.5, fontSize: '0.72rem', color: 'text.secondary', borderColor: 'divider' }}
+                  >
                     <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.75 }}>
                       <Box
                         component="span"
@@ -303,7 +347,17 @@ export const PriceCalculator: FC<Props> = ({ randCost, currencySymbol }) => {
                       {row.label}
                     </Box>
                   </TableCell>
-                  <TableCell align="right" sx={{ pr: 0, py: 0.5, fontSize: '0.75rem', fontWeight: 600, fontFamily: 'monospace', borderColor: 'divider' }}>
+                  <TableCell
+                    align="right"
+                    sx={{
+                      pr: 0,
+                      py: 0.5,
+                      fontSize: '0.75rem',
+                      fontWeight: 600,
+                      fontFamily: 'monospace',
+                      borderColor: 'divider'
+                    }}
+                  >
                     {row.value}
                   </TableCell>
                 </TableRow>
