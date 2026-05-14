@@ -1,3 +1,4 @@
+import BoltIcon from '@mui/icons-material/Bolt';
 import CloseIcon from '@mui/icons-material/Close';
 import {
   Box,
@@ -14,6 +15,7 @@ import {
 import { useCallback, useEffect, useState, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../i18n';
+import { getApi } from '../../shared/api/restApi';
 import { DatabaseType } from '../../shared/enums/databaseType';
 import { DBInitType } from '../../shared/enums/dbInitType';
 import { useDBInit } from '../../shared/hooks/dbSelector/useDBInit';
@@ -40,6 +42,7 @@ export const ServerDatabase: FC<Props> = ({ onDatabaseRead }) => {
   };
   const [savedDbs, setSavedDbs] = useState<PostgresConfig[]>([]);
   const [isInitializing, setIsInitializing] = useState(false);
+  const [envConfig, setEnvConfig] = useState<PostgresConfig | null>(null);
 
   const { execute: initDB } = useDBInit({
     mode: DBInitType.create,
@@ -113,6 +116,19 @@ export const ServerDatabase: FC<Props> = ({ onDatabaseRead }) => {
     } catch {
       dispatch(addToast({ message: t('error.failedToLoad'), severity: 'error' }));
     }
+
+    // Pre-fetch any Postgres connection profile defined via env vars in the
+    // backend (.env), so the user can jump straight to a one-click connect.
+    let cancelled = false;
+    void getApi()
+      .getConfiguredPostgresConfig()
+      .then(res => {
+        if (!cancelled && res.success && res.data) setEnvConfig(res.data);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [dispatch]);
 
@@ -178,6 +194,25 @@ export const ServerDatabase: FC<Props> = ({ onDatabaseRead }) => {
         <Button variant="contained" onClick={handleSetupConnection} disabled={isInitializing}>
           {t('databaseChooser.connect')}
         </Button>
+        {envConfig && (
+          <Tooltip
+            arrow
+            title={`${envConfig.user}@${envConfig.host}:${envConfig.port}/${envConfig.database}`}
+          >
+            <Button
+              variant="contained"
+              color="secondary"
+              startIcon={<BoltIcon />}
+              disabled={isInitializing}
+              onClick={() => {
+                setIsInitializing(true);
+                setConnection(envConfig);
+              }}
+            >
+              {t('databaseChooser.connectFromEnv', 'Connect (from .env)')}
+            </Button>
+          </Tooltip>
+        )}
       </Box>
 
       {savedDbs.length > 0 && (

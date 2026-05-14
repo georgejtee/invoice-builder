@@ -8,6 +8,14 @@ import type { PostgresConfig } from '../types/postgresConfig';
 import { getColumnType, getDefaultValue, insertOrIgnore } from '../utils/dbHelper';
 import { createPostgresAdapter, createSqliteAdapter } from './client';
 
+// When the user enables SSL we deliberately skip certificate validation.
+// Required for environments behind a TLS-intercepting middlebox (corporate
+// proxy, Zscaler, AV with HTTPS scanning, etc.) where Node's CA list does
+// not include the middlebox's CA. Trade-off: this disables MITM protection
+// for the DB connection. Acceptable for trusted networks / dev only.
+const buildSslConfig = (ssl: boolean): false | { rejectUnauthorized: false } =>
+  ssl ? { rejectUnauthorized: false } : false;
+
 const sanitizeDatabaseName = (database: string): string => {
   if (typeof database !== 'string' || database.trim().length === 0) {
     throw new Error('error.invalidDBName');
@@ -27,6 +35,7 @@ export const testPostgresConnection = async (data?: PostgresConfig): Promise<voi
   if (!data) throw new Error('error.connectionFailed');
 
   const { host, port, user, password, ssl } = data;
+  const sslConfig = buildSslConfig(ssl);
 
   const client = new Client({
     host,
@@ -34,13 +43,23 @@ export const testPostgresConnection = async (data?: PostgresConfig): Promise<voi
     user,
     password,
     database: 'postgres',
-    ssl
+    ssl: sslConfig
   });
 
   try {
     await client.connect();
     await client.query('SELECT 1');
-  } catch {
+  } catch (err) {
+    console.error('[testPostgresConnection] failed:', {
+      host,
+      port,
+      user,
+      ssl,
+      code: (err as { code?: string })?.code,
+      address: (err as { address?: string })?.address,
+      message: (err as Error)?.message,
+      stack: (err as Error)?.stack
+    });
     throw new Error('error.connectionFailed');
   } finally {
     await client.end().catch(() => {});
@@ -50,33 +69,83 @@ export const testPostgresConnection = async (data?: PostgresConfig): Promise<voi
 export const openPostgreSql = async (data: PostgresConfig): Promise<{ db: DatabaseAdapter }> => {
   const { host, port, user, password, database, ssl } = data;
   const safeDatabase = sanitizeDatabaseName(database);
+  const sslConfig = buildSslConfig(ssl);
 
   const authPart = password ? `${encodeURIComponent(user)}:${encodeURIComponent(password)}` : encodeURIComponent(user);
-  const sslPart = ssl ? '?sslmode=require' : '';
+  // `sslmode=no-verify` forces TLS but skips cert validation, matching the
+  // explicit { rejectUnauthorized: false } we pass to the Pool below.
+  const sslPart = ssl ? '?sslmode=no-verify' : '';
   const connectionString = `postgresql://${authPart}@${host}:${port}/${safeDatabase}${sslPart}`;
 
+  // Managed Postgres providers (Supabase, Neon, RDS, etc.) connect to the default
+  // `postgres` database which always exists and which the connecting role cannot
+  // create. Skip the existence-check + CREATE roundtrip in that case.
+  const isManagedDefaultDatabase = safeDatabase === 'postgres';
+
+  if (!isManagedDefaultDatabase) {
+    try {
+      const tempClient = new Client({
+        host,
+        port,
+        user,
+        password,
+        database: 'postgres',
+        ssl: sslConfig
+      });
+      await tempClient.connect();
+      const res = await tempClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [safeDatabase]);
+      if (res.rowCount === 0) {
+        try {
+          await tempClient.query(`CREATE DATABASE "${safeDatabase}"`);
+        } catch (createErr) {
+          // If the role cannot CREATE DATABASE, surface a clear log line and bail.
+          console.error('[openPostgreSql] CREATE DATABASE failed:', {
+            host,
+            port,
+            user,
+            ssl,
+            database: safeDatabase,
+            code: (createErr as { code?: string })?.code,
+            message: (createErr as Error)?.message
+          });
+          await tempClient.end().catch(() => {});
+          throw new Error('error.databaseCreationFailed');
+        }
+      }
+      await tempClient.end();
+    } catch (err) {
+      console.error('[openPostgreSql] bootstrap connect/check failed:', {
+        host,
+        port,
+        user,
+        ssl,
+        database: safeDatabase,
+        code: (err as { code?: string })?.code,
+        address: (err as { address?: string })?.address,
+        message: (err as Error)?.message,
+        stack: (err as Error)?.stack
+      });
+      throw new Error('error.databaseCreationFailed');
+    }
+  }
+
   try {
-    const tempClient = new Client({
+    const adapter = await createPostgresAdapter(connectionString, sslConfig);
+    return { db: adapter };
+  } catch (err) {
+    console.error('[openPostgreSql] adapter connect failed:', {
       host,
       port,
       user,
-      password,
-      database: 'postgres',
-      ssl
+      ssl,
+      database: safeDatabase,
+      code: (err as { code?: string })?.code,
+      address: (err as { address?: string })?.address,
+      message: (err as Error)?.message,
+      stack: (err as Error)?.stack
     });
-    await tempClient.connect();
-    const res = await tempClient.query('SELECT 1 FROM pg_database WHERE datname = $1', [safeDatabase]);
-    if (res.rowCount === 0) {
-      await tempClient.query(`CREATE DATABASE "${safeDatabase}"`);
-    }
-    await tempClient.end();
-  } catch {
-    throw new Error('error.databaseCreationFailed');
+    throw err;
   }
-
-  const adapter = await createPostgresAdapter(connectionString);
-
-  return { db: adapter };
 };
 
 export const openSqlLite = async (data: {
@@ -383,13 +452,48 @@ export const initSchema = async (db: DatabaseAdapter): Promise<void> => {
     await db.run(`CREATE INDEX IF NOT EXISTS idx_invoices_status ON invoices("status")`);
     await db.run(`CREATE INDEX IF NOT EXISTS idx_invoices_issuedAt ON invoices("issuedAt")`);
     await db.run('COMMIT');
-  } catch {
+  } catch (err) {
+    // Surface the underlying driver error (Postgres / SQLite). Without this
+    // the user only sees the generic i18n key `error.schemaInitFailed` and
+    // we have no way to tell which CREATE TABLE / CHECK / index actually
+    // failed against the remote schema.
+    const pgErr = err as {
+      message?: string;
+      code?: string;
+      detail?: string;
+      hint?: string;
+      where?: string;
+      position?: string;
+      routine?: string;
+      severity?: string;
+    };
+    console.error('[initSchema] underlying error:', {
+      message: pgErr?.message,
+      code: pgErr?.code,
+      detail: pgErr?.detail,
+      hint: pgErr?.hint,
+      where: pgErr?.where,
+      position: pgErr?.position,
+      routine: pgErr?.routine,
+      severity: pgErr?.severity
+    });
+
     try {
       await db.run('ROLLBACK');
-    } catch {
+    } catch (rollbackErr) {
+      console.error('[initSchema] rollback also failed:', rollbackErr);
       throw new Error(`error.rollbackFailed`);
     }
-    throw new Error(`error.schemaInitFailed`);
+
+    // Re-throw a wrapped error that preserves the driver's `code` so
+    // `mapDatabaseError` (in errorFunctions.ts) can match it to a specific
+    // i18n key. The underlying message is included for any unmapped codes.
+    const wrapped = new Error(
+      `error.schemaInitFailed: ${pgErr?.message ?? 'unknown'}`
+    ) as Error & { code?: string; cause?: unknown };
+    if (pgErr?.code) wrapped.code = pgErr.code;
+    wrapped.cause = err;
+    throw wrapped;
   }
 };
 

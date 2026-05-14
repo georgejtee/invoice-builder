@@ -79,6 +79,8 @@ export interface InvoicesByCurrency {
 export interface ItemForm {
   quantity: number | undefined;
   unitPrice: number | undefined;
+  /** Original ZAR base price (item.amount) used to recompute quotation prices when the invoice currency changes. */
+  basePrice?: number;
   header?: string;
   value?: string;
   sortOrder?: number;
@@ -282,6 +284,7 @@ export interface InvoiceItemSnapshots {
   itemName: string;
   unitPriceCents: string;
   unitName?: string;
+  code?: string;
 }
 
 export interface InvoiceItem {
@@ -295,6 +298,8 @@ export interface InvoiceItem {
   updatedAt?: string;
   taxRate: number;
   taxType?: InvoiceItemTaxType;
+  /** Source ZAR base price kept in memory so the unit price can be recomputed when the invoice currency changes. */
+  basePrice?: number;
 }
 
 export interface InvoiceCurrencySnapshots {

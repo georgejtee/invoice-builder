@@ -3,6 +3,7 @@ import { Box, Divider, Fab, Tooltip } from '@mui/material';
 import { memo, useCallback, useEffect, useMemo, useState, useTransition, type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import i18n from '../../../i18n';
+import { getApi } from '../../../shared/api/restApi';
 import { EInvoice } from '../../../shared/enums/einvoice';
 import { InvoiceStatus } from '../../../shared/enums/invoiceStatus';
 import { InvoiceType } from '../../../shared/enums/invoiceType';
@@ -30,7 +31,12 @@ import type {
 import type { Item } from '../../../shared/types/item';
 import type { Response } from '../../../shared/types/response';
 import type { StyleProfile } from '../../../shared/types/styleProfiles';
+import { computePrice } from '../../../shared/utils/computePrice';
 import { getInvoiceTotal, getPaidAmount } from '../../../shared/utils/invoiceFunctions';
+import {
+  currencyCodeToOutputCurrency,
+  priceParamsFromSettings
+} from '../../../shared/utils/priceCalculatorFromSettings';
 import { useAppDispatch, useAppSelector } from '../../../state/configureStore';
 import { addToast, selectSettings } from '../../../state/pageSlice';
 import { NotesSelector } from './../Form/NotesSelector';
@@ -317,7 +323,7 @@ const InvoiceFormComponent: FC<Props> = ({
   );
 
   const handleOnClickCurrencies = useCallback(
-    (data: Currency) => {
+    async (data: Currency) => {
       handleOnClose(setIsDropdownOpenCurrencies);
 
       if (!invoiceForm) return;
@@ -344,7 +350,66 @@ const InvoiceFormComponent: FC<Props> = ({
         return result.toString();
       };
 
+      const isQuotation = invoiceForm.invoiceType === InvoiceType.quotation;
+      const newOutputCurrency = currencyCodeToOutputCurrency(data.code);
+      const priceParams = priceParamsFromSettings(storeSettings);
+
+      // For quotations, fall back to looking up each invoice item's source `Item.amount`
+      // (the original ZAR base price) when `basePrice` isn't already captured in memory —
+      // e.g. when re-editing a saved quotation. This lets `computePrice` always run with
+      // the correct input regardless of when/where the item was added.
+      let baseAmountByItemId: Map<number, number> | undefined;
+      if (isQuotation) {
+        const missingItemIds = (invoiceForm.invoiceItems ?? [])
+          .filter(it => it.basePrice == undefined && it.itemId != undefined)
+          .map(it => it.itemId);
+
+        if (missingItemIds.length > 0) {
+          try {
+            const itemsResp = await getApi().getAllItems();
+            if (itemsResp.success && itemsResp.data) {
+              baseAmountByItemId = new Map<number, number>();
+              for (const it of itemsResp.data) {
+                if (it.id != undefined) {
+                  baseAmountByItemId.set(it.id, Number(it.amount ?? 0));
+                }
+              }
+            }
+          } catch {
+            // Swallow lookup errors and fall through to the subunit rescale below.
+          }
+        }
+      }
+
       const updatedItems = invoiceForm.invoiceItems?.map(it => {
+        const resolvedBasePrice =
+          it.basePrice != undefined ? Number(it.basePrice) : baseAmountByItemId?.get(it.itemId);
+
+        // For quotations with a known base price, recompute the unit price for the new currency
+        // using the same formula used when the item was first added.
+        if (isQuotation && resolvedBasePrice != undefined) {
+          const recomputedUnitPrice = computePrice({
+            randCost: resolvedBasePrice,
+            qty: 1,
+            ...priceParams,
+            currency: newOutputCurrency
+          }).unitPrice;
+          const recomputedCents =
+            newSubunit !== undefined ? recomputedUnitPrice * newSubunit : recomputedUnitPrice;
+
+          return {
+            ...it,
+            basePrice: resolvedBasePrice,
+            invoiceItemSnapshot: {
+              ...it.invoiceItemSnapshot,
+              unitPriceCents: recomputedCents.toString()
+            }
+          };
+        }
+
+        // Fallback for non-quotation items, or items where the source amount couldn't be
+        // resolved (deleted source item, etc.): keep the old subunit rescale so we don't
+        // silently zero out the price.
         return {
           ...it,
           invoiceItemSnapshot: {
@@ -383,7 +448,7 @@ const InvoiceFormComponent: FC<Props> = ({
         });
       });
     },
-    [handleOnClose, setInvoiceForm, invoiceForm]
+    [handleOnClose, setInvoiceForm, invoiceForm, storeSettings]
   );
 
   const handleOnClickClients = useCallback(
@@ -420,7 +485,7 @@ const InvoiceFormComponent: FC<Props> = ({
 
       if (!invoiceForm) return;
 
-      const { quantity, header, value, alignment, sortOrder, unitPrice } = data;
+      const { quantity, header, value, alignment, sortOrder, unitPrice, basePrice } = data;
 
       const unitPriceCents =
         invoiceForm.invoiceCurrencySnapshot?.currencySubunit && unitPrice != undefined
@@ -435,7 +500,8 @@ const InvoiceFormComponent: FC<Props> = ({
           parentInvoiceItemId: newItemID,
           itemName: item.name,
           unitName: item.unitName,
-          unitPriceCents: unitPriceCents.toString()
+          unitPriceCents: unitPriceCents.toString(),
+          code: item.code
         },
         customField:
           header && value && alignment && sortOrder != undefined
@@ -449,7 +515,8 @@ const InvoiceFormComponent: FC<Props> = ({
         quantity: quantity?.toString() ?? '0',
         taxName: undefined,
         taxRate: 0,
-        taxType: undefined
+        taxType: undefined,
+        basePrice
       };
 
       startTransition(() => {

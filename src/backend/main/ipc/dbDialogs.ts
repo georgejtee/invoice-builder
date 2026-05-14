@@ -75,7 +75,38 @@ const resetIPCHandlers = () => {
   handlers.forEach(handler => ipcMain.removeHandler(handler));
 };
 
+/**
+ * Read a Postgres connection profile from environment variables (loaded via dotenv
+ * in `main.ts`). Lets users keep connection details — including the password — in
+ * a `.env` file so they don't have to retype them every launch.
+ *
+ * Recognised vars:
+ *   DB_HOST, DB_PORT, DB_USER, DB_PASSWORD, DB_NAME (or DB_DATABASE), DB_SSL
+ *
+ * Returns null when not enough info is present to connect.
+ */
+const readConfiguredPostgresConfig = (): PostgresConfig | null => {
+  const host = process.env.DB_HOST?.trim();
+  const user = process.env.DB_USER?.trim();
+  const database = (process.env.DB_NAME ?? process.env.DB_DATABASE)?.trim();
+
+  if (!host || !user || !database) return null;
+
+  const portRaw = process.env.DB_PORT?.trim();
+  const port = portRaw ? Number(portRaw) : 5432;
+  const password = process.env.DB_PASSWORD ?? '';
+  const sslRaw = process.env.DB_SSL?.trim().toLowerCase();
+  const ssl = sslRaw === 'true' || sslRaw === '1' || sslRaw === 'yes' || sslRaw === 'on';
+
+  if (!Number.isFinite(port)) return null;
+
+  return { host, port, user, password, database, ssl };
+};
+
 export const initDBDialogsHandlers = (dbName: string, mainWindow: BrowserWindow) => {
+  ipcMain.handle('get-configured-postgres-config', async () => {
+    return { success: true, data: readConfiguredPostgresConfig() };
+  });
   ipcMain.handle('show-save-db-dialog', async () => {
     const defaultPath = join(process.env.USERPROFILE || process.cwd(), `${dbName}.db`);
     const result = await dialog.showSaveDialog({

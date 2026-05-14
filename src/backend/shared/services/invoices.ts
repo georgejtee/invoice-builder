@@ -165,7 +165,8 @@ const itemsSnapshotFields: (keyof InvoiceItemSnapshots)[] = [
   'parentInvoiceItemId',
   'itemName',
   'unitPriceCents',
-  'unitName'
+  'unitName',
+  'code'
 ];
 const invoiceSequencesFields: (keyof InvoiceSequence)[] = ['nextSequence', 'clientId', 'businessId'];
 
@@ -1033,13 +1034,15 @@ export const duplicateInvoice = async (
         "parentInvoiceItemId",
         "itemName",
         "unitPriceCents",
-        "unitName"
+        "unitName",
+        "code"
       )
       SELECT
         "newItems"."id",
         snap."itemName",
         snap."unitPriceCents",
-        snap."unitName"
+        snap."unitName",
+        snap."code"
       FROM invoice_item_snapshots AS snap
       JOIN invoice_items AS "oldItems"
         ON snap."parentInvoiceItemId" = "oldItems"."id"

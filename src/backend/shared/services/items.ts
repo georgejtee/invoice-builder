@@ -137,8 +137,31 @@ export const batchAddItem = async (db: DatabaseAdapter, data: Item[]) => {
   const handle = handleItemEntity<Item>(db, 'items', itemFields);
   try {
     await db.run('BEGIN');
+
+    // Upsert-by-name semantics for Excel imports: when a row's `name`
+    // already exists in the DB, only update the price (`amount`) and
+    // leave every other field of the existing item intact. Brand-new
+    // names get a regular insert. We pre-load the existing name → id
+    // map once so the per-row check is O(1) instead of querying the DB
+    // for every row.
+    const existing = await db.all<{ id: number; name: string }>('SELECT "id", "name" FROM items');
+    const nameToId = new Map<string, number>(existing.map(r => [r.name, r.id]));
+
     for (const row of data) {
       const finalItem = await resolveItemRelations(db, row);
+      const existingId = typeof finalItem.name === 'string' ? nameToId.get(finalItem.name) : undefined;
+
+      if (existingId !== undefined) {
+        await db.run(
+          `UPDATE items
+              SET "amount" = ?,
+                  "updatedAt" = ${getDefaultValue("(datetime('now'))", db.type)}
+            WHERE "id" = ?`,
+          [finalItem.amount ?? '0', existingId]
+        );
+        continue;
+      }
+
       const result = await handle(finalItem);
       if (!result.success) {
         try {
@@ -147,6 +170,12 @@ export const batchAddItem = async (db: DatabaseAdapter, data: Item[]) => {
           throw new Error(`error.rollbackFailed`);
         }
         return result;
+      }
+      // Track names we just inserted so the same name appearing twice in
+      // the same file behaves as upsert-then-update on the second hit.
+      const newId = (result.data as { id?: number } | undefined)?.id;
+      if (typeof finalItem.name === 'string' && typeof newId === 'number') {
+        nameToId.set(finalItem.name, newId);
       }
     }
     await db.run('COMMIT');

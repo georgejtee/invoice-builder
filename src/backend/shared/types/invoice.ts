@@ -27,6 +27,7 @@ export interface InvoiceItemSnapshots {
   itemName: string;
   unitPriceCents: string;
   unitName?: string;
+  code?: string;
 }
 
 export interface InvoiceCurrencySnapshots {

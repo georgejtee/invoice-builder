@@ -45,6 +45,7 @@ declare global {
       }) => Promise<Response<unknown>>;
       getDatabaseList: () => Promise<Response<string[]>>;
       testConnection: (data: PostgresConfig) => Promise<Response<unknown>>;
+      getConfiguredPostgresConfig: () => Promise<Response<PostgresConfig | null>>;
 
       getAllSettings: () => Promise<Response<Settings>>;
       updateSettings: (data: SettingsUpdate) => Promise<Response<SettingsUpdate>>;

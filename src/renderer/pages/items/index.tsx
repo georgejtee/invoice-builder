@@ -111,9 +111,44 @@ export const ItemsPage: FC = () => {
       noItemText={t('items.noItem')}
       leftTitle={t('menuItems.items')}
       validateAndNormalize={async data => {
-        if (!isItemFromData(data)) return;
+        if (!data || typeof data !== 'object') return;
+        const d = data as Record<string, unknown>;
 
-        return data;
+        // Excel/Sheets often types numeric columns as numbers and boolean
+        // columns as plain text ("True"/"False"). Coerce both back to the
+        // canonical shapes the type guard expects so imported rows aren't
+        // rejected for purely cosmetic typing differences.
+        const normalized: Record<string, unknown> = { ...d };
+
+        if (typeof d.amount === 'number') {
+          normalized.amount = String(d.amount);
+        }
+
+        if (typeof d.isArchived === 'string') {
+          const v = d.isArchived.trim().toLowerCase();
+          if (['true', '1', 'yes'].includes(v)) normalized.isArchived = true;
+          else if (['false', '0', 'no', ''].includes(v)) normalized.isArchived = false;
+        }
+
+        // Provide DB defaults for NOT NULL columns when the spreadsheet
+        // omits them. The insert builder turns `undefined` into a literal
+        // NULL (see handleItemEntity in services/items.ts), which Postgres
+        // rejects with code 23502 even when the column has a DEFAULT — the
+        // default only kicks in when the column is OMITTED from the insert.
+        if (typeof normalized.isArchived === 'undefined' || normalized.isArchived === null) {
+          normalized.isArchived = false;
+        }
+        if (
+          typeof normalized.amount === 'undefined' ||
+          normalized.amount === null ||
+          normalized.amount === ''
+        ) {
+          normalized.amount = '0';
+        }
+
+        if (!isItemFromData(normalized)) return;
+
+        return normalized;
       }}
       renderListItem={(item, selectedItem, onEdit, onDelete) => (
         <List

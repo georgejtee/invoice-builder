@@ -1,9 +1,12 @@
 import { Document, Font, Image, Page, View } from '@react-pdf/renderer';
 import { memo, useMemo, type FC } from 'react';
 import { InvoiceStatus } from '../../../shared/enums/invoiceStatus';
+import { InvoiceType } from '../../../shared/enums/invoiceType';
 import { LayoutType } from '../../../shared/enums/layoutType';
 import type { AttachmentURL, InvoiceFromData, PdfTexts } from '../../../shared/types/invoice';
 import type { Settings } from '../../../shared/types/settings';
+import { NCELayout } from '../../../shared/components/pdf/layouts/nce';
+import { createCurrencyFormatter, getItemFinancialData } from '../../../shared/utils/invoiceFunctions';
 import Inter_18pt_Bold from './../../../assets/inter/Inter_18pt-Bold.ttf';
 import Inter_18pt_BoldItalic from './../../../assets/inter/Inter_18pt-BoldItalic.ttf';
 import Inter_18pt_Italic from './../../../assets/inter/Inter_18pt-Italic.ttf';
@@ -128,6 +131,76 @@ const PDFDocumentComponent: FC<Props> = ({
     () => createCustomFontStyles(invoiceForm?.invoiceCustomization?.fontFamily),
     [invoiceForm?.invoiceCustomization?.fontFamily]
   );
+
+  if (invoiceForm?.invoiceType === InvoiceType.quotation) {
+    const safeLogoUrl =
+      typeof logoUrl === 'string' && /^data:image\/[a-z0-9.+\-]+;base64,/i.test(logoUrl) ? logoUrl : undefined;
+
+    const nceData = {
+      issuedAt: invoiceForm.issuedAt,
+      refNumber: `${invoiceForm.invoicePrefix ?? ''}${invoiceForm.invoiceNumber ?? ''}${invoiceForm.invoiceSuffix ?? ''}`,
+      clientCompanyName: invoiceForm.invoiceClientSnapshot?.clientName ?? '',
+      clientName: invoiceForm.invoiceClientSnapshot?.clientName ?? '',
+      clientEmail: invoiceForm.invoiceClientSnapshot?.clientEmail ?? '',
+      clientPhone: invoiceForm.invoiceClientSnapshot?.clientPhone ?? '',
+      clientAddress: invoiceForm.invoiceClientSnapshot?.clientAddress ?? '',
+      clientAdditional: invoiceForm.invoiceClientSnapshot?.clientAdditional ?? '',
+      businessName: invoiceForm.invoiceBusinessSnapshot?.businessName ?? '',
+      businessAddress: invoiceForm.invoiceBusinessSnapshot?.businessAddress ?? '',
+      businessEmail: invoiceForm.invoiceBusinessSnapshot?.businessEmail ?? '',
+      businessPhone: invoiceForm.invoiceBusinessSnapshot?.businessPhone ?? '',
+      businessAdditional: invoiceForm.invoiceBusinessSnapshot?.businessAdditional ?? '',
+      projectName: invoiceForm.customerNotes ?? '',
+      logoUrl: safeLogoUrl
+    };
+
+    const formatCurrency = createCurrencyFormatter({
+      storeSettings,
+      currencySymbol: invoiceForm.invoiceCurrencySnapshot?.currencySymbol,
+      currencyCode: invoiceForm.invoiceCurrencySnapshot?.currencyCode,
+      currencySubunit: invoiceForm.invoiceCurrencySnapshot?.currencySubunit,
+      currencyFormat: invoiceForm.currencyFormat
+    });
+
+    const itemRows =
+      invoiceForm.invoiceItems?.map(item => {
+        const financialData = getItemFinancialData({
+          storeSettings,
+          currencySymbol: invoiceForm.invoiceCurrencySnapshot?.currencySymbol,
+          currencyCode: invoiceForm.invoiceCurrencySnapshot?.currencyCode,
+          currencySubunit: invoiceForm.invoiceCurrencySnapshot?.currencySubunit,
+          currencyFormat: invoiceForm.currencyFormat,
+          unitPrice: Number(item.invoiceItemSnapshot.unitPriceCents),
+          quantity: Number(item.quantity),
+          taxType: item.taxType,
+          taxRate: item.taxRate,
+          invoiceItems: invoiceForm.invoiceItems ?? [],
+          discountType: invoiceForm.discountType,
+          discountAmount: Number(invoiceForm.discountAmountCents ?? 0),
+          discountPercent: invoiceForm.discountPercent
+        });
+        return {
+          quantity: item.quantity,
+          code: item.invoiceItemSnapshot.code ?? '',
+          name: item.invoiceItemSnapshot.itemName,
+          unitPrice: financialData.formattedUnitPrice,
+          totalPrice: financialData.formattedTotal,
+          totalAmount: financialData.totalUnitPrice
+        };
+      }) ?? [];
+
+    const totalAmount = itemRows.reduce((sum, row) => sum + row.totalAmount, 0);
+
+    return (
+      <NCELayout
+        data={{
+          ...nceData,
+          items: itemRows.map(({ totalAmount: _omit, ...row }) => row),
+          totalFormatted: formatCurrency(totalAmount)
+        }}
+      />
+    );
+  }
 
   return (
     <Document>

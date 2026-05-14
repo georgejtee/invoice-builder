@@ -389,7 +389,7 @@ const ItemsInfoComponent: FC<Props> = ({ invoiceForm, storeSettings, labels }) =
       </View>
       {invoiceForm?.invoiceItems?.map((item, index) => {
         const { quantity, taxType, taxRate, invoiceItemSnapshot, customField } = item;
-        const { unitPriceCents = '0', itemName, unitName } = invoiceItemSnapshot;
+        const { unitPriceCents = '0', itemName, unitName, code: snapshotItemCode } = invoiceItemSnapshot;
 
         const { formattedUnitPrice, formattedTotal, formattedTax, formattedItemDiscountAmount, itemDiscountAmount } =
           getItemFinancialData({
@@ -469,6 +469,20 @@ const ItemsInfoComponent: FC<Props> = ({ invoiceForm, storeSettings, labels }) =
                       >
                         {itemName}
                       </Text>
+                      {snapshotItemCode ? (
+                        <Text
+                          style={[
+                            PDF_STYLES.tableCellSubtle,
+                            {
+                              fontSize:
+                                FONT_SIZES[invoiceForm?.invoiceCustomization?.fontSize ?? DEFAULT_FONT_SIZES]
+                                  .tableCellSubtle
+                            }
+                          ]}
+                        >
+                          {snapshotItemCode}
+                        </Text>
+                      ) : null}
                       {taxType && (
                         <>
                           {itemDiscountAmount > 0 && (

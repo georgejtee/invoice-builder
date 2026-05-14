@@ -77,6 +77,7 @@ const ItemsDropdownComponent: FC<Props> = ({
           currUnitPrice={suggestedUnitPrice}
           priceAfterExpense={type === InvoiceType.quotation ? suggestedUnitPrice : undefined}
           usePriceAfterExpenseAsUnitPrice={type === InvoiceType.quotation}
+          basePrice={selectedItem ? Number(selectedItem.amount ?? 0) : undefined}
           isOpen={selectedItem !== undefined}
           onCancel={() => setSelectedItem(undefined)}
           onSave={data => {

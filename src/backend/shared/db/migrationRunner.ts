@@ -7,6 +7,9 @@ import { mapDatabaseError } from '../utils/errorFunctions';
 
 export const runMigrations = async (db: DatabaseAdapter, migrationsPath: string) => {
   let transactionStarted = false;
+  // Track the migration we're currently executing so the catch block can
+  // attribute the failure to a specific file, not just "some migration".
+  let currentMigration: string | null = null;
   try {
     const files = fs
       .readdirSync(migrationsPath)
@@ -41,8 +44,11 @@ export const runMigrations = async (db: DatabaseAdapter, migrationsPath: string)
           throw new Error(`error.noUpFunction`);
         }
         if (migration.up) {
+          currentMigration = name;
+          console.log(`[migrations] applying ${name}`);
           await migration.up(db);
           await db.run(`INSERT INTO migrations("name") VALUES(?)`, [name]);
+          currentMigration = null;
         }
       }
     }
@@ -54,10 +60,47 @@ export const runMigrations = async (db: DatabaseAdapter, migrationsPath: string)
     }
     return { success: true, message: undefined, data: undefined, key: undefined };
   } catch (error) {
+    // Surface the underlying driver error with all the diagnostic fields
+    // Postgres provides (column, table, constraint, detail, etc.). Without
+    // this `mapDatabaseError` strips everything for known codes (e.g. 23502
+    // NOT NULL) and we end up with a generic toast that doesn't identify
+    // which row / column / migration is the actual culprit.
+    const pgErr = error as {
+      message?: string;
+      code?: string;
+      detail?: string;
+      hint?: string;
+      where?: string;
+      position?: string;
+      routine?: string;
+      severity?: string;
+      column?: string;
+      table?: string;
+      schema?: string;
+      constraint?: string;
+      dataType?: string;
+    };
+    console.error('[migrations] failed during migration:', currentMigration ?? '(pre/post-migration phase)', {
+      message: pgErr?.message,
+      code: pgErr?.code,
+      detail: pgErr?.detail,
+      hint: pgErr?.hint,
+      schema: pgErr?.schema,
+      table: pgErr?.table,
+      column: pgErr?.column,
+      constraint: pgErr?.constraint,
+      dataType: pgErr?.dataType,
+      where: pgErr?.where,
+      position: pgErr?.position,
+      routine: pgErr?.routine,
+      severity: pgErr?.severity
+    });
+
     if (transactionStarted) {
       try {
         await db.run('ROLLBACK');
-      } catch {
+      } catch (rollbackErr) {
+        console.error('[migrations] rollback also failed:', rollbackErr);
         throw new Error(`error.rollbackFailed`);
       }
     }
@@ -65,6 +108,19 @@ export const runMigrations = async (db: DatabaseAdapter, migrationsPath: string)
     if (db.type === DatabaseType.sqlite) {
       await db.run('PRAGMA foreign_keys = ON;');
     }
-    return { success: false, ...mapDatabaseError(error, db.type) };
+
+    const mapped = mapDatabaseError(error, db.type);
+    // Build a richer message so the toast tells the user *which* column,
+    // *which* table and *which* migration. Falls back to whatever
+    // mapDatabaseError already produced.
+    const parts: string[] = [];
+    if (currentMigration) parts.push(`migration=${currentMigration}`);
+    if (pgErr?.table) parts.push(`table=${pgErr.table}`);
+    if (pgErr?.column) parts.push(`column=${pgErr.column}`);
+    if (pgErr?.constraint) parts.push(`constraint=${pgErr.constraint}`);
+    if (pgErr?.detail) parts.push(`detail=${pgErr.detail}`);
+    const enrichedMessage = parts.length > 0 ? `${pgErr?.message ?? mapped.key} | ${parts.join(' ')}` : mapped.message;
+
+    return { success: false, ...mapped, message: enrichedMessage ?? mapped.message };
   }
 };

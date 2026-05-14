@@ -46,6 +46,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   },
 
   testConnection: (data: PostgresConfig) => ipcRenderer.invoke('test-connection', data),
+  getConfiguredPostgresConfig: () => ipcRenderer.invoke('get-configured-postgres-config'),
   selectDatabase: () => ipcRenderer.invoke('show-save-db-dialog'),
   openDatabase: () => ipcRenderer.invoke('show-open-db-dialog'),
   initializeDatabase: (data: { fullPath: string; mode?: DBInitType }) => ipcRenderer.invoke('initialize-db', data),

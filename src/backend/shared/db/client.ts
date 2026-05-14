@@ -1,4 +1,4 @@
-import { Pool, type PoolClient } from 'pg';
+import { Pool, type PoolClient, type PoolConfig } from 'pg';
 import sqlite3 from 'sqlite3';
 import { DatabaseType } from '../enums/databaseType';
 import type { DatabaseAdapter } from '../types/DatabaseAdapter';
@@ -59,8 +59,11 @@ export const createSqliteAdapter = (db: sqlite3.Database): DatabaseAdapter => {
   };
 };
 
-export const createPostgresAdapter = (connectionString: string): DatabaseAdapter => {
-  const pool = new Pool({ connectionString });
+export const createPostgresAdapter = (
+  connectionString: string,
+  ssl?: PoolConfig['ssl']
+): DatabaseAdapter => {
+  const pool = new Pool({ connectionString, ssl });
   let clientInTransaction: PoolClient | null = null;
 
   const acquireClient = async () => {

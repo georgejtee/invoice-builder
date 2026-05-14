@@ -37,6 +37,7 @@ interface Props {
   currUnitPrice?: number;
   priceAfterExpense?: number;
   usePriceAfterExpenseAsUnitPrice?: boolean;
+  basePrice?: number;
   customField?: CustomField;
   onCancel?: () => void;
   onSave?: (data: ItemForm) => void;
@@ -49,6 +50,7 @@ const ItemMetadataSetterComponent: FC<Props> = ({
   currUnitPrice,
   priceAfterExpense,
   usePriceAfterExpenseAsUnitPrice = false,
+  basePrice,
   customField,
   onCancel = () => {},
   onSave = () => {}
@@ -56,9 +58,7 @@ const ItemMetadataSetterComponent: FC<Props> = ({
   const { t } = useTranslation();
   const storeSettings = useAppSelector(selectSettings);
   const [isFormValid, setIsFormValid] = useState(true);
-  const computedUnitPrice = Number(
-    usePriceAfterExpenseAsUnitPrice ? (priceAfterExpense ?? 0) : (currUnitPrice ?? 0)
-  );
+  const computedUnitPrice = Number(usePriceAfterExpenseAsUnitPrice ? (priceAfterExpense ?? 0) : (currUnitPrice ?? 0));
   const { form, setForm, update } = useForm<ItemForm>({
     quantity: Number(currQuantity ?? 1),
     header: customField?.header ?? undefined,
@@ -209,7 +209,8 @@ const ItemMetadataSetterComponent: FC<Props> = ({
         onSave={data => {
           onSave({
             ...(data as ItemForm),
-            unitPrice: usePriceAfterExpenseAsUnitPrice ? computedUnitPrice : (data as ItemForm).unitPrice
+            unitPrice: usePriceAfterExpenseAsUnitPrice ? computedUnitPrice : (data as ItemForm).unitPrice,
+            basePrice
           });
           setErrors({
             unitPrice: false,
@@ -238,29 +239,41 @@ const ItemMetadataSetterComponent: FC<Props> = ({
             />
           </Grid>
           {storeSettings && (
-            <Grid size={{ xs: 12, md: 6 }}>
-              {usePriceAfterExpenseAsUnitPrice ? (
-                <TextField
-                  fullWidth
-                  label={t('items.priceAfterExpense', 'Price after expense')}
-                  value={computedUnitPrice}
-                  InputProps={{ readOnly: true }}
-                />
-              ) : (
-                <AmountInput
-                  required={true}
-                  amountFormat={storeSettings?.amountFormat}
-                  label={t('common.amount')}
-                  value={form.unitPrice}
-                  error={errors.unitPrice}
-                  helperText={errors.unitPrice ? t('common.fieldRequired') : ''}
-                  onChange={e => {
-                    update('unitPrice', e);
-                    validateField('unitPrice', (e ?? '').toString());
-                  }}
-                />
+            <>
+              {usePriceAfterExpenseAsUnitPrice && basePrice !== undefined && (
+                <Grid size={{ xs: 12, md: 6 }}>
+                  <TextField
+                    fullWidth
+                    label={t('items.basePrice', 'Price in rands')}
+                    value={basePrice}
+                    InputProps={{ readOnly: true }}
+                  />
+                </Grid>
               )}
-            </Grid>
+              <Grid size={{ xs: 12, md: 6 }}>
+                {usePriceAfterExpenseAsUnitPrice ? (
+                  <TextField
+                    fullWidth
+                    label={t('items.priceAfterExpense', 'Price after expense')}
+                    value={computedUnitPrice}
+                    InputProps={{ readOnly: true }}
+                  />
+                ) : (
+                  <AmountInput
+                    required={true}
+                    amountFormat={storeSettings?.amountFormat}
+                    label={t('common.amount')}
+                    value={form.unitPrice}
+                    error={errors.unitPrice}
+                    helperText={errors.unitPrice ? t('common.fieldRequired') : ''}
+                    onChange={e => {
+                      update('unitPrice', e);
+                      validateField('unitPrice', (e ?? '').toString());
+                    }}
+                  />
+                )}
+              </Grid>
+            </>
           )}
           <Grid size={{ xs: 12, md: 6 }}>
             <Autocomplete
