@@ -32,7 +32,7 @@ import type { Item } from '../../../shared/types/item';
 import type { Response } from '../../../shared/types/response';
 import type { StyleProfile } from '../../../shared/types/styleProfiles';
 import { computePrice } from '../../../shared/utils/computePrice';
-import { getInvoiceTotal, getPaidAmount } from '../../../shared/utils/invoiceFunctions';
+import { formatQuotationSequenceNumber, getInvoiceTotal, getPaidAmount } from '../../../shared/utils/invoiceFunctions';
 import {
   currencyCodeToOutputCurrency,
   priceParamsFromSettings
@@ -648,6 +648,60 @@ const InvoiceFormComponent: FC<Props> = ({
     },
     [handleOnClose, setInvoiceForm, invoiceForm]
   );
+
+  /** New quotations: fill quote ref + issued date as soon as business and client exist (same data as saving Quote information). */
+  useEffect(() => {
+    if (type !== InvoiceType.quotation || !invoiceForm) return;
+    if (invoiceForm.id !== undefined) return;
+    const businessId = invoiceForm.businessId;
+    const clientId = invoiceForm.clientId;
+    if (businessId === undefined || clientId === undefined) return;
+    if ((invoiceForm.invoiceNumber ?? '').trim() !== '') return;
+
+    let cancelled = false;
+    void (async () => {
+      const seqRes = await getApi().getNextSequence({
+        businessId,
+        clientId,
+        documentType: 'quotation'
+      });
+      if (cancelled || !seqRes.success || seqRes.data == null) return;
+
+      const quotePrefix = storeSettings?.quotePrefix ?? 'NCE';
+      const quoteSuffix = storeSettings?.quoteSuffix ?? 'Q';
+      const invoiceNumber = formatQuotationSequenceNumber(seqRes.data);
+
+      startTransition(() => {
+        setInvoiceForm(prev => {
+          if (!prev) return prev;
+          if (prev.id !== undefined) return prev;
+          if (prev.businessId !== businessId || prev.clientId !== clientId) return prev;
+          if ((prev.invoiceNumber ?? '').trim() !== '') return prev;
+          return {
+            ...prev,
+            invoiceType: InvoiceType.quotation,
+            issuedAt: prev.issuedAt?.trim() ? prev.issuedAt : new Date().toISOString(),
+            invoiceNumber,
+            invoicePrefix: quotePrefix,
+            invoiceSuffix: quoteSuffix
+          };
+        });
+      });
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [
+    type,
+    invoiceForm?.id,
+    invoiceForm?.businessId,
+    invoiceForm?.clientId,
+    invoiceForm?.invoiceNumber,
+    storeSettings?.quotePrefix,
+    storeSettings?.quoteSuffix,
+    setInvoiceForm
+  ]);
 
   const handleOnClickShippingFees = useCallback(
     (data: number) => {

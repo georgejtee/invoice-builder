@@ -12,6 +12,8 @@ interface Props {
   onCustomizedInvoice?: (data: {
     suffix?: string;
     prefix?: string;
+    quotePrefix?: string;
+    quoteSuffix?: string;
     includeMonth: boolean;
     includeYear: boolean;
     includeBusinessName: boolean;
@@ -23,6 +25,8 @@ export const CustomizeInvoice: FC<Props> = ({ showBack, onCustomizedInvoice = ()
 
   const [suffix, setSuffix] = useState<string>(storeSettings?.invoiceSuffix ?? '');
   const [prefix, setPrefix] = useState<string>(storeSettings?.invoicePrefix ?? '');
+  const [quotePrefix, setQuotePrefix] = useState<string>(storeSettings?.quotePrefix ?? 'NCE');
+  const [quoteSuffix, setQuoteSuffix] = useState<string>(storeSettings?.quoteSuffix ?? 'Q');
   const [includeMonth, setIncludeMonth] = useState<boolean>(storeSettings?.shouldIncludeMonth ?? true);
   const [includeYear, setIncludeYear] = useState<boolean>(storeSettings?.shouldIncludeYear ?? true);
   const [includeBusinessName, setIncludeBusinessName] = useState<boolean>(
@@ -30,8 +34,21 @@ export const CustomizeInvoice: FC<Props> = ({ showBack, onCustomizedInvoice = ()
   );
   const debounceRef = useRef<NodeJS.Timeout | null>(null);
 
+  const emit = (partial: Partial<{ prefix: string; suffix: string; quotePrefix: string; quoteSuffix: string }>) => {
+    onCustomizedInvoice({
+      prefix: partial.prefix ?? prefix,
+      suffix: partial.suffix ?? suffix,
+      quotePrefix: partial.quotePrefix ?? quotePrefix,
+      quoteSuffix: partial.quoteSuffix ?? quoteSuffix,
+      includeMonth,
+      includeYear,
+      includeBusinessName
+    });
+  };
+
   const handleInputChange =
-    (setter: (val: string) => void, key: 'prefix' | 'suffix') => (e: React.ChangeEvent<HTMLInputElement>) => {
+    (setter: (val: string) => void, key: 'prefix' | 'suffix' | 'quotePrefix' | 'quoteSuffix') =>
+    (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       if (validateOnlyNumbersLetters(value)) {
         setter(value);
@@ -41,13 +58,10 @@ export const CustomizeInvoice: FC<Props> = ({ showBack, onCustomizedInvoice = ()
         }
 
         debounceRef.current = setTimeout(() => {
-          onCustomizedInvoice({
-            prefix: key === 'prefix' ? value : prefix,
-            suffix: key === 'suffix' ? value : suffix,
-            includeMonth,
-            includeYear,
-            includeBusinessName
-          });
+          if (key === 'prefix') emit({ prefix: value });
+          else if (key === 'suffix') emit({ suffix: value });
+          else if (key === 'quotePrefix') emit({ quotePrefix: value });
+          else emit({ quoteSuffix: value });
         }, 500);
       }
     };
@@ -60,6 +74,8 @@ export const CustomizeInvoice: FC<Props> = ({ showBack, onCustomizedInvoice = ()
       onCustomizedInvoice({
         prefix,
         suffix,
+        quotePrefix,
+        quoteSuffix,
         includeMonth: key === 'includeMonth' ? checked : includeMonth,
         includeYear: key === 'includeYear' ? checked : includeYear,
         includeBusinessName: key === 'includeBusinessName' ? checked : includeBusinessName
@@ -68,11 +84,11 @@ export const CustomizeInvoice: FC<Props> = ({ showBack, onCustomizedInvoice = ()
 
   useEffect(() => {
     const timeout = setTimeout(() => {
-      onCustomizedInvoice({ prefix, suffix, includeMonth, includeYear, includeBusinessName });
+      onCustomizedInvoice({ prefix, suffix, quotePrefix, quoteSuffix, includeMonth, includeYear, includeBusinessName });
     }, 500);
 
     return () => clearTimeout(timeout);
-  }, [prefix, suffix, includeMonth, includeYear, includeBusinessName, onCustomizedInvoice]);
+  }, [prefix, suffix, quotePrefix, quoteSuffix, includeMonth, includeYear, includeBusinessName, onCustomizedInvoice]);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -96,6 +112,26 @@ export const CustomizeInvoice: FC<Props> = ({ showBack, onCustomizedInvoice = ()
             placeholder="e.g. ALPHA"
             value={suffix}
             onChange={handleInputChange(setSuffix, 'suffix')}
+            helperText={t('customizeInvoice.lettersAndNumbers')}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TextField
+            label={t('common.quotePrefix')}
+            fullWidth
+            placeholder="NCE"
+            value={quotePrefix}
+            onChange={handleInputChange(setQuotePrefix, 'quotePrefix')}
+            helperText={t('customizeInvoice.lettersAndNumbers')}
+          />
+        </Grid>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <TextField
+            label={t('common.quoteSuffix')}
+            fullWidth
+            placeholder="Q"
+            value={quoteSuffix}
+            onChange={handleInputChange(setQuoteSuffix, 'quoteSuffix')}
             helperText={t('customizeInvoice.lettersAndNumbers')}
           />
         </Grid>

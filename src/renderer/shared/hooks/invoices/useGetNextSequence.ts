@@ -5,11 +5,14 @@ import type { Response } from '../../types/response';
 import { useAsyncAction } from '../ayncAction/useAsyncAction';
 
 interface UseSequenceParams extends RequestHook<Response<number | undefined>> {
-  seqData: { businessId: number; clientId: number };
+  seqData: { businessId: number; clientId: number; documentType?: 'invoice' | 'quotation' };
 }
 
 export const useGetNextSequence = ({ immediate = true, showLoader = true, seqData, onDone }: UseSequenceParams) => {
-  const asyncFn = useCallback(() => getApi().getNextSequence(seqData), [seqData]);
+  const asyncFn = useCallback(
+    () => getApi().getNextSequence(seqData),
+    [seqData.businessId, seqData.clientId, seqData.documentType]
+  );
   const { data: result, execute } = useAsyncAction<Response<number | undefined>>(asyncFn, {
     showLoader,
     immediate,

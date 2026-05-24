@@ -35,10 +35,28 @@ interface NCELayoutData {
 }
 const styles = StyleSheet.create({
   page: { padding: 30, fontSize: 10, fontFamily: 'Helvetica' },
-  header: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 20 },
-  companyInfo: { width: '60%' },
-  logo: { width: 160, height: 100, marginBottom: 10 },
-  refBlock: { width: '35%', textAlign: 'right' },
+  /* ── top logo strip ── */
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 6
+  },
+  companyInfo: { width: '58%', paddingRight: 12 },
+  businessName: { fontSize: 14, fontFamily: 'Helvetica-Bold', marginBottom: 3 },
+  headerRight: { width: '38%', flexDirection: 'column', alignItems: 'flex-end' },
+  logo: { width: 160, height: 90, marginTop: -20, objectFit: 'contain' },
+  /* ── client + date/ref row ── */
+  metaRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginTop: 6,
+    marginBottom: 8
+  },
+  clientBlock: { width: '58%' },
+  refBlock: { width: '38%', flexDirection: 'column', alignItems: 'flex-end' },
+  refText: { textAlign: 'right' },
   bold: { fontFamily: 'Helvetica-Bold' },
   title: { fontSize: 14, fontFamily: 'Helvetica-Bold', marginBottom: 10 },
   table: {
@@ -59,39 +77,43 @@ const styles = StyleSheet.create({
   },
   tableCol: { borderStyle: 'solid', borderWidth: 1, borderLeftWidth: 0, borderTopWidth: 0 },
   cell: { margin: 5, fontSize: 9 },
-  footer: { marginTop: 30 },
-  bankDetails: { marginTop: 20, padding: 10, borderStyle: 'solid', borderWidth: 1, borderColor: '#000' }
+  footer: { marginTop: 15 },
+  bankDetails: { marginTop: 15, padding: 10, borderStyle: 'solid', borderWidth: 1, borderColor: '#000' }
 });
 
 export const NCELayout = ({ data }: { data: NCELayoutData }) => (
   <Document>
     <Page size="A4" style={styles.page}>
-      {/* Header Section */}
+      {/* Row 1: business info left · logo right */}
       <View style={styles.header}>
         <View style={styles.companyInfo}>
-        <Image
-      style={styles.logo}
-  src={nceLogo}
-/>
-          {data.businessName ? <Text style={styles.bold}>{data.businessName}</Text> : null}
+          {data.businessName ? <Text style={styles.businessName}>{data.businessName}</Text> : null}
           {data.businessAddress ? <Text>{data.businessAddress}</Text> : null}
           {data.businessPhone ? <Text>Mobile: {data.businessPhone}</Text> : null}
           {data.businessEmail ? <Text>Email: {data.businessEmail}</Text> : null}
           {data.businessAdditional ? <Text>{data.businessAdditional}</Text> : null}
         </View>
-        <View style={styles.refBlock}>
-          <Text>{data.issuedAt ? new Date(data.issuedAt).toLocaleDateString() : new Date().toLocaleDateString()}</Text>
-          <Text style={styles.bold}>Ref: {data.refNumber}</Text>
+        <View style={styles.headerRight}>
+          <Image style={styles.logo} src={nceLogo} />
         </View>
       </View>
 
-      <View style={{ marginTop: 20, marginBottom: 10 }}>
-        {data.clientName ? <Text style={styles.bold}>Attention: {data.clientName}</Text> : null}
-        {data.clientCompanyName ? <Text>Company: {data.clientCompanyName}</Text> : null}
-        {data.clientAddress ? <Text>Address: {data.clientAddress}</Text> : null}
-        {data.clientEmail ? <Text>Email: {data.clientEmail}</Text> : null}
-        {data.clientPhone ? <Text>Mobile: {data.clientPhone}</Text> : null}
-        {data.clientAdditional ? <Text>{data.clientAdditional}</Text> : null}
+      {/* Row 2: client details left · date + ref right */}
+      <View style={styles.metaRow}>
+        <View style={styles.clientBlock}>
+          {data.clientName ? <Text style={styles.bold}>Attention: {data.clientName}</Text> : null}
+          {data.clientCompanyName ? <Text>Company: {data.clientCompanyName}</Text> : null}
+          {data.clientAddress ? <Text>Address: {data.clientAddress}</Text> : null}
+          {data.clientEmail ? <Text>Email: {data.clientEmail}</Text> : null}
+          {data.clientPhone ? <Text>Mobile: {data.clientPhone}</Text> : null}
+          {data.clientAdditional ? <Text>{data.clientAdditional}</Text> : null}
+        </View>
+        <View style={styles.refBlock}>
+          <Text style={styles.refText}>
+            {data.issuedAt ? new Date(data.issuedAt).toLocaleDateString() : new Date().toLocaleDateString()}
+          </Text>
+          <Text style={[styles.bold, styles.refText]}>Ref: {data.refNumber}</Text>
+        </View>
       </View>
       <Text style={[styles.bold, { marginBottom: 10 }]}>{data.projectName}</Text>
 
@@ -148,7 +170,6 @@ export const NCELayout = ({ data }: { data: NCELayoutData }) => (
 <Text>We hope the above is in line with your requirements and assure you of our best</Text>
 <Text>services and attention at all times .</Text>
 </View>
-
 
 <View style={styles.footer}>
 <Text>Yours faithfully</Text>

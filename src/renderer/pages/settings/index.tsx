@@ -176,6 +176,8 @@ export const SettingsPage = () => {
     (data: {
       suffix?: string;
       prefix?: string;
+      quotePrefix?: string;
+      quoteSuffix?: string;
       includeMonth: boolean;
       includeYear: boolean;
       includeBusinessName: boolean;
@@ -184,6 +186,8 @@ export const SettingsPage = () => {
         setCustomInvoiseSettings({
           invoicePrefix: data.prefix,
           invoiceSuffix: data.suffix,
+          quotePrefix: data.quotePrefix,
+          quoteSuffix: data.quoteSuffix,
           shouldIncludeMonth: data.includeMonth,
           shouldIncludeYear: data.includeYear,
           shouldIncludeBusinessName: data.includeBusinessName

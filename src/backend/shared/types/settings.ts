@@ -10,6 +10,10 @@ export interface Settings {
   isDarkMode: boolean;
   invoicePrefix?: string;
   invoiceSuffix?: string;
+  /** Default quote prefix for new quotations (e.g. NCE). */
+  quotePrefix?: string;
+  /** Default quote suffix for new quotations (e.g. Q). */
+  quoteSuffix?: string;
   shouldIncludeYear: boolean;
   shouldIncludeMonth: boolean;
   shouldIncludeBusinessName: boolean;

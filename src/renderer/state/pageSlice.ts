@@ -128,6 +128,8 @@ export const pageSlice = createSlice({
       action: PayloadAction<{
         invoiceSuffix?: string;
         invoicePrefix?: string;
+        quotePrefix?: string;
+        quoteSuffix?: string;
         shouldIncludeMonth: boolean;
         shouldIncludeYear: boolean;
         shouldIncludeBusinessName: boolean;
@@ -138,6 +140,8 @@ export const pageSlice = createSlice({
         ...state.settings,
         invoicePrefix: action.payload.invoicePrefix,
         invoiceSuffix: action.payload.invoiceSuffix,
+        ...(action.payload.quotePrefix !== undefined ? { quotePrefix: action.payload.quotePrefix } : {}),
+        ...(action.payload.quoteSuffix !== undefined ? { quoteSuffix: action.payload.quoteSuffix } : {}),
         shouldIncludeMonth: action.payload.shouldIncludeMonth,
         shouldIncludeYear: action.payload.shouldIncludeYear,
         shouldIncludeBusinessName: action.payload.shouldIncludeBusinessName

@@ -18,6 +18,8 @@ export interface InvoiceSequence {
   businessId?: number;
   clientId?: number;
   nextSequence: number;
+  /** Next quotation number (per business + client), independent of invoice numbering. */
+  nextQuotationSequence?: number;
   createdAt?: string;
   updatedAt?: string;
 }

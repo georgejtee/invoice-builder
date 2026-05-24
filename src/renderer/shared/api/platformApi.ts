@@ -432,10 +432,11 @@ export const webApi = () => {
     deletePreset: (id: number) => apiDelete<Response<unknown>>(`/api/presets/${id}`),
     addBatchPreset: (data: PresetAdd[]) => apiPost<Response<PresetAdd[]>>('/api/presets/batch', data),
 
-    getNextSequence: async (data: { businessId: number; clientId: number }) =>
+    getNextSequence: async (data: { businessId: number; clientId: number; documentType?: 'invoice' | 'quotation' }) =>
       apiGet<Response<number | undefined>>('/api/invoices/sequence', {
         businessId: data.businessId.toString(),
-        clientId: data.clientId.toString()
+        clientId: data.clientId.toString(),
+        ...(data.documentType ? { documentType: data.documentType } : {})
       }),
     getEInvoiceXML: async (data: { invoiceId: number; einvoice: EInvoice }) =>
       apiGetBlob('/api/invoices/xml', {

@@ -92,7 +92,11 @@ declare global {
       addCurrency: (data: CurrencyAdd) => Promise<Response<Currency>>;
       addBatchCurrency: (data: CurrencyAdd[]) => Promise<Response<Currency[]>>;
 
-      getNextSequence: (data: { businessId: number; clientId: number }) => Promise<Response<number | undefined>>;
+      getNextSequence: (data: {
+        businessId: number;
+        clientId: number;
+        documentType?: 'invoice' | 'quotation';
+      }) => Promise<Response<number | undefined>>;
       getEInvoiceXML: (data: { invoiceId: number; einvoice: EInvoice }) => Promise<Response<Uint8Array | undefined>>;
       getCustomHeaders: (type: InvoiceType) => Promise<Response<CustomFieldMeta[]>>;
       getAllInvoices: (type?: InvoiceType, filter?: FilterData[]) => Promise<Response<Invoice[]>>;

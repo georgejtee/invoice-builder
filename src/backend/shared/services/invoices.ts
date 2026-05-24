@@ -1,6 +1,7 @@
 import type { Response } from '../../shared/types/response';
 import type { EInvoice } from '../enums/einvoice';
 import { InvoiceStatus } from '../enums/invoiceStatus';
+import { InvoiceType } from '../enums/invoiceType';
 import type { DatabaseAdapter } from '../types/DatabaseAdapter';
 import type { EntityWithId } from '../types/entityWithId';
 import type {
@@ -168,7 +169,12 @@ const itemsSnapshotFields: (keyof InvoiceItemSnapshots)[] = [
   'unitName',
   'code'
 ];
-const invoiceSequencesFields: (keyof InvoiceSequence)[] = ['nextSequence', 'clientId', 'businessId'];
+const invoiceSequencesFields: (keyof InvoiceSequence)[] = [
+  'nextSequence',
+  'nextQuotationSequence',
+  'clientId',
+  'businessId'
+];
 
 const handleEntity =
   <T extends EntityWithId>(db: DatabaseAdapter, table: string, fields: readonly (keyof T)[]) =>
@@ -325,22 +331,26 @@ const processAttachments = async (
   return { success: true } as Response<number>;
 };
 
+type SequenceDocumentKind = 'invoice' | 'quotation';
+
 const processSequence = async (
   db: DatabaseAdapter,
   handlers: { handleSequences: (data: InvoiceSequence, isUpdate?: boolean) => Promise<Response<number>> },
-  data: { clientId: number; businessId: number; invoiceNumber?: string }
+  data: { clientId: number; businessId: number; invoiceNumber?: string; documentKind?: SequenceDocumentKind }
 ) => {
+  const kind = data.documentKind ?? 'invoice';
   const currentSequence = await db.get<InvoiceSequence>(
     `SELECT * FROM invoice_sequences WHERE "businessId" = ? and "clientId" = ?`,
     [data.businessId, data.clientId]
   );
   if (currentSequence) {
+    const nSeq = Number(currentSequence.nextSequence);
+    const nQuote = Number(currentSequence.nextQuotationSequence ?? 1);
     const r = await handlers.handleSequences(
       {
-        id: currentSequence.id,
-        businessId: currentSequence.businessId,
-        clientId: currentSequence.clientId,
-        nextSequence: Number(currentSequence.nextSequence) + 1
+        ...currentSequence,
+        nextSequence: kind === 'quotation' ? nSeq : nSeq + 1,
+        nextQuotationSequence: kind === 'quotation' ? nQuote + 1 : nQuote
       } as InvoiceSequence,
       true
     );
@@ -349,22 +359,20 @@ const processSequence = async (
       return r;
     }
   } else {
-    const dataSequence = await db.get<{ nextSequence: number }>(
+    const dataSequence = await db.get<{ nextSequence: number; nextQuotationSequence: number }>(
       `SELECT
-        COALESCE(
-          CAST(? AS BIGINT) + 1,
-          COUNT(*) + 1
-        ) AS "nextSequence"
-      FROM invoices
-      WHERE "businessId" = ?
-      GROUP BY "businessId";`,
-      [data.invoiceNumber ?? null, data.businessId]
+        COALESCE(MAX(CASE WHEN inv."invoiceType" = 'invoice' THEN CAST(inv."invoiceNumber" AS INTEGER) END), 0) + 1 AS "nextSequence",
+        COALESCE(MAX(CASE WHEN inv."invoiceType" = 'quotation' THEN CAST(inv."invoiceNumber" AS INTEGER) END), 0) + 1 AS "nextQuotationSequence"
+      FROM invoices inv
+      WHERE inv."businessId" = ? AND inv."clientId" = ?`,
+      [data.businessId, data.clientId]
     );
     if (dataSequence) {
       const r = await handlers.handleSequences({
         businessId: data.businessId,
         clientId: data.clientId,
-        nextSequence: dataSequence.nextSequence
+        nextSequence: dataSequence.nextSequence,
+        nextQuotationSequence: dataSequence.nextQuotationSequence
       } as InvoiceSequence);
       if (!r.success) {
         await rollbackOrThrow(db);
@@ -515,12 +523,28 @@ export const getInvoiceXML = async (db: DatabaseAdapter, data: { invoiceId: numb
   return { success: true, data: xmlData };
 };
 
-export const getNextSequence = async (db: DatabaseAdapter, data: { businessId: number; clientId: number }) => {
+export const getNextSequence = async (
+  db: DatabaseAdapter,
+  data: { businessId: number; clientId: number; documentType?: SequenceDocumentKind }
+) => {
+  const docType = data.documentType ?? 'invoice';
   const currentSequence = await db.get<InvoiceSequence>(
     `SELECT * FROM invoice_sequences WHERE "businessId" = ? and "clientId" = ?`,
     [data.businessId, data.clientId]
   );
-  return { success: true, data: currentSequence?.nextSequence };
+  if (currentSequence) {
+    if (docType === 'quotation') {
+      return { success: true, data: currentSequence.nextQuotationSequence ?? 1 };
+    }
+    return { success: true, data: currentSequence.nextSequence };
+  }
+  const row = await db.get<{ n: number }>(
+    `SELECT COALESCE(MAX(CAST(inv."invoiceNumber" AS INTEGER)), 0) + 1 AS n
+     FROM invoices inv
+     WHERE inv."businessId" = ? AND inv."clientId" = ? AND inv."invoiceType" = ?`,
+    [data.businessId, data.clientId, docType === 'quotation' ? InvoiceType.quotation : InvoiceType.invoice]
+  );
+  return { success: true, data: row?.n ?? 1 };
 };
 
 export const getCustomHeaders = async (db: DatabaseAdapter, type: 'invoice' | 'quotation') => {
@@ -679,7 +703,12 @@ export const addInvoice = async (db: DatabaseAdapter, data: Invoice) => {
     const resultSequence = await processSequence(
       db,
       { handleSequences },
-      { clientId: data.clientId, businessId: data.businessId, invoiceNumber: data.invoiceNumber }
+      {
+        clientId: data.clientId,
+        businessId: data.businessId,
+        invoiceNumber: data.invoiceNumber,
+        documentKind: data.invoiceType === InvoiceType.quotation ? 'quotation' : 'invoice'
+      }
     );
     if (!resultSequence.success) {
       await rollbackOrThrow(db);
@@ -847,7 +876,11 @@ export const updateInvoice = async (db: DatabaseAdapter, data: Invoice) => {
     const resultSequence = await processSequence(
       db,
       { handleSequences },
-      { clientId: data.clientId, businessId: data.businessId }
+      {
+        clientId: data.clientId,
+        businessId: data.businessId,
+        documentKind: data.invoiceType === InvoiceType.quotation ? 'quotation' : 'invoice'
+      }
     );
     if (!resultSequence.success) {
       await rollbackOrThrow(db);
@@ -888,19 +921,22 @@ export const duplicateInvoice = async (
       await rollbackOrThrow(db);
       return { success: false };
     }
+    const targetIsQuotation = invoiceType === 'quotation';
+    const nSeq = Number(seqRow.nextSequence);
+    const nQuote = Number(seqRow.nextQuotationSequence ?? 1);
+    const newInvoiceNumber = targetIsQuotation ? String(nQuote).padStart(4, '0') : seqRow.nextSequence.toString();
+
     const r = await handleSequences(
       {
-        id: seqRow.id,
-        businessId: seqRow.businessId,
-        clientId: seqRow.clientId,
-        nextSequence: Number(seqRow.nextSequence) + 1
+        ...seqRow,
+        nextSequence: targetIsQuotation ? nSeq : nSeq + 1,
+        nextQuotationSequence: targetIsQuotation ? nQuote + 1 : nQuote
       } as InvoiceSequence,
       true
     );
     if (!r.success) {
       await rollbackOrThrow(db);
     }
-    const newInvoiceNumber = seqRow.nextSequence.toString();
 
     const insertInvoiceSQL = `
         INSERT INTO invoices (

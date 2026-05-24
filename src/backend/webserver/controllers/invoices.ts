@@ -20,8 +20,16 @@ export const initInvoicesController = (app: Express) => {
     res.send(xmlBuffer);
   });
   app.get('/api/invoices/sequence', requireDB, async (req: Request, res: Response) => {
-    const data = req.query as unknown as { businessId: number; clientId: number };
-    const result = await invoicesService.getNextSequence(dbInstance!, data);
+    const q = req.query as unknown as {
+      businessId: string;
+      clientId: string;
+      documentType?: 'invoice' | 'quotation';
+    };
+    const result = await invoicesService.getNextSequence(dbInstance!, {
+      businessId: Number(q.businessId),
+      clientId: Number(q.clientId),
+      documentType: q.documentType ?? 'invoice'
+    });
     res.json(result);
   });
   app.get('/api/invoices/headers', requireDB, async (req: Request, res: Response) => {

@@ -9,6 +9,7 @@ import { useForm } from '../../../../shared/hooks/form/useForm';
 import { useGetNextSequence } from '../../../../shared/hooks/invoices/useGetNextSequence';
 import type { InvoiceInfo } from '../../../../shared/types/invoice';
 import type { Response } from '../../../../shared/types/response';
+import { formatQuotationSequenceNumber } from '../../../../shared/utils/invoiceFunctions';
 import { validators } from '../../../../shared/utils/validatorFunctions';
 import { useAppDispatch, useAppSelector } from '../../../../state/configureStore';
 import { addToast, selectSettings } from '../../../../state/pageSlice';
@@ -26,12 +27,25 @@ const InvoiceInformationDropdownComponent: FC<Props> = ({ isOpen, onClose, onOpe
   const storeSettings = useAppSelector(selectSettings);
   const theme = useTheme();
   const isDesktop = useMediaQuery(theme.breakpoints.up('md'));
+  const defaultPrefix =
+    information.id != null
+      ? (information?.invoicePrefix ?? '')
+      : information.invoiceType === InvoiceType.quotation
+        ? (storeSettings?.quotePrefix ?? 'NCE')
+        : (storeSettings?.invoicePrefix ?? '');
+  const defaultSuffix =
+    information.id != null
+      ? (information?.invoiceSuffix ?? '')
+      : information.invoiceType === InvoiceType.quotation
+        ? (storeSettings?.quoteSuffix ?? 'Q')
+        : (storeSettings?.invoiceSuffix ?? '');
+
   const { form, setForm, update } = useForm<InvoiceInfo>({
     issuedAt: information?.issuedAt ?? new Date().toISOString(),
     invoiceNumber: information?.invoiceNumber ?? '',
     dueDate: information?.dueDate ?? '',
-    invoicePrefix: information.id ? (information?.invoicePrefix ?? '') : (storeSettings?.invoicePrefix ?? ''),
-    invoiceSuffix: information.id ? (information?.invoiceSuffix ?? '') : (storeSettings?.invoiceSuffix ?? '')
+    invoicePrefix: defaultPrefix,
+    invoiceSuffix: defaultSuffix
   });
   const [errors, setErrors] = useState({
     issuedAt: false,
@@ -43,7 +57,8 @@ const InvoiceInformationDropdownComponent: FC<Props> = ({ isOpen, onClose, onOpe
   const { execute: retrieveSequence } = useGetNextSequence({
     seqData: {
       businessId: information.businessId ?? -1,
-      clientId: information.clientId ?? -1
+      clientId: information.clientId ?? -1,
+      documentType: information.invoiceType === InvoiceType.quotation ? 'quotation' : 'invoice'
     },
     immediate: false,
     onDone: (data: Response<number | undefined>) => {
@@ -54,13 +69,16 @@ const InvoiceInformationDropdownComponent: FC<Props> = ({ isOpen, onClose, onOpe
         } else if (data.key) dispatch(addToast({ message: t(data.key), severity: 'error' }));
       }
 
-      if (
-        data.data != undefined &&
-        (form.invoiceNumber == undefined || form.invoiceNumber === '') &&
-        form.invoiceNumber !== data.data.toString()
-      ) {
-        update('invoiceNumber', data.data.toString());
-        validateField('invoiceNumber', data.data.toString());
+      if (data.data == undefined) return;
+
+      const nextStr =
+        information.invoiceType === InvoiceType.quotation
+          ? formatQuotationSequenceNumber(data.data)
+          : data.data.toString();
+
+      if ((form.invoiceNumber == undefined || form.invoiceNumber === '') && form.invoiceNumber !== nextStr) {
+        update('invoiceNumber', nextStr);
+        validateField('invoiceNumber', nextStr);
       }
     }
   });
@@ -79,15 +97,27 @@ const InvoiceInformationDropdownComponent: FC<Props> = ({ isOpen, onClose, onOpe
     }
 
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [information.businessId, information.clientId]);
+  }, [information.businessId, information.clientId, information.invoiceType]);
 
   useEffect(() => {
+    const pfx =
+      information.id != null
+        ? (information?.invoicePrefix ?? '')
+        : information.invoiceType === InvoiceType.quotation
+          ? (storeSettings?.quotePrefix ?? 'NCE')
+          : (storeSettings?.invoicePrefix ?? '');
+    const sfx =
+      information.id != null
+        ? (information?.invoiceSuffix ?? '')
+        : information.invoiceType === InvoiceType.quotation
+          ? (storeSettings?.quoteSuffix ?? 'Q')
+          : (storeSettings?.invoiceSuffix ?? '');
     setForm({
       issuedAt: information?.issuedAt ?? new Date().toISOString(),
       invoiceNumber: information?.invoiceNumber ?? '',
       dueDate: information?.dueDate,
-      invoicePrefix: information.id ? (information?.invoicePrefix ?? '') : (storeSettings?.invoicePrefix ?? ''),
-      invoiceSuffix: information.id ? (information?.invoiceSuffix ?? '') : (storeSettings?.invoiceSuffix ?? '')
+      invoicePrefix: pfx,
+      invoiceSuffix: sfx
     });
   }, [information, setForm, storeSettings]);
 

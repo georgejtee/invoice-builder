@@ -10,6 +10,8 @@ export interface Settings {
   isDarkMode: boolean;
   invoicePrefix?: string;
   invoiceSuffix?: string;
+  quotePrefix?: string;
+  quoteSuffix?: string;
   shouldIncludeYear: boolean;
   shouldIncludeMonth: boolean;
   shouldIncludeBusinessName: boolean;
@@ -36,6 +38,8 @@ export interface SettingsUpdate {
   isDarkMode?: boolean;
   invoicePrefix?: string;
   invoiceSuffix?: string;
+  quotePrefix?: string;
+  quoteSuffix?: string;
   shouldIncludeYear?: boolean;
   shouldIncludeMonth?: boolean;
   shouldIncludeBusinessName?: boolean;

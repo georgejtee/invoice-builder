@@ -602,3 +602,9 @@ export const getItemFinancialData = (data: {
     itemDiscountAmount: finalItemDiscount
   };
 };
+
+/** Zero-padded quotation numeric segment (e.g. 1 → 0001). */
+export const formatQuotationSequenceNumber = (n: number, minWidth = 4): string => {
+  if (!Number.isFinite(n) || n < 0) return String(n);
+  return String(Math.trunc(n)).padStart(minWidth, '0');
+};
